@@ -41,7 +41,7 @@ class InfoService(object):
             time.sleep(15)
 
 
-class InfoserviceCLI(object):
+class InfoServiceCLI(object):
     """class to handle the command line invocation of APF. 
        parse the input options,
        setup everything, and run Factory class
