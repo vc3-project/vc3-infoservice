@@ -13,6 +13,7 @@ __status__ = "Production"
 import logging
 import logging.handlers
 import threading
+import time
 
 from optparse import OptionParser
 from ConfigParser import ConfigParser
@@ -35,7 +36,9 @@ class InfoService(object):
         
     def run(self):
         self.log.debug('Infoservice running...')
-        
+        while True:
+            self.log.debug("Infoservice running...")
+            time.sleep(15)
 
 
 class InfoserviceCLI(object):
