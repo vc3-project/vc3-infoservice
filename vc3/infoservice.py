@@ -12,7 +12,11 @@ __status__ = "Production"
 
 import logging
 import logging.handlers
+import os
+import platform
 import pwd
+import socket
+import sys
 import threading
 import time
 
@@ -148,6 +152,8 @@ John Hover <jhover@bnl.gov>
             os.chown(logdir, runuid, rungid)
             logStream = logging.FileHandler(filename=lf)    
 
+        # Check python version 
+        major, minor, release, st, num = sys.version_info
         if major == 2 and minor == 4:
             FORMAT='%(asctime)s (UTC) [ %(levelname)s ] %(name)s %(filename)s:%(lineno)d : %(message)s'
         else:
