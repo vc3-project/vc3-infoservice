@@ -153,14 +153,14 @@ start() {
             PROGRETVAL=$?
             rm -f $PIDFILE
         fi
-        [ "$PROGRETVAL" -eq 0 ] && success $"autopyfactory startup" || failure $"autopyfactory startup"
+        [ "$PROGRETVAL" -eq 0 ] && success $"$SERVICENAME startup" || failure $"$SERVICENAME startup"
         echo
     else
         if checkpid $PID; then
-            echo "$0: daemon with PID $PID already running." && success $"autopyfactory startup"
+            echo "$0: daemon with PID $PID already running." && success $"$SERVICENAME startup"
             PROGRETVAL=0
         else
-            echo "$0: daemon dead but PID file exists: $PIDFILE" && failure $"autopyfactory startup"
+            echo "$0: daemon dead but PID file exists: $PIDFILE" && failure $"$SERVICENAME startup"
             PROGRETVAL=1
         fi
     fi
@@ -171,10 +171,10 @@ start() {
 stop() {
 
     check
-    echo -n $"Stopping AutoPyFactory daemon: "
-    killproc -p $PIDFILE autopyfactory
+    echo -n $"Stopping $SERVICENAME daemon: "
+    killproc -p $PIDFILE $SERVICENAME
     RETVAL=$?
-    [ $RETVAL -eq 0 ] && rm -f $PIDFILE && success $"autopyfactory shutdown" || failure $"autopyfactory shutdown"
+    [ $RETVAL -eq 0 ] && rm -f $PIDFILE && success $"$SERVICENAME shutdown" || failure $"$SERVICENAME shutdown"
     echo
     return $RETVAL
 }
