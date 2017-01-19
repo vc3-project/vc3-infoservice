@@ -260,7 +260,7 @@ John Hover <jhover@bnl.gov>
                 self.log.error('Config failure')
                 sys.exit(1)
         
-        self.config.set("global", "configfiles", self.options.confFiles)
+        #self.config.set("global", "configfiles", self.options.confFiles)
            
     def run(self):
         """
