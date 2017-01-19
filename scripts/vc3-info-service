@@ -9,8 +9,8 @@ def main():
     Simplest possible invocation of Infoservice program. Does not have the .py extension
     to keep the RPM building system happy. 
     '''
-    is = InfoServiceCLI()
-    is.run()
+    srv = InfoServiceCLI()
+    srv.run()
         
 if __name__ == "__main__":
     main()
