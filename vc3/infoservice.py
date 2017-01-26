@@ -9,12 +9,14 @@ __maintainer__ = "John Hover"
 __email__ = "jhover@bnl.gov"
 __status__ = "Production"
 
-
+import cherrypy
 import logging
 import logging.handlers
 import os
 import platform
 import pwd
+import random
+import string
 import socket
 import sys
 import threading
@@ -31,6 +33,16 @@ def trace(self, msg, *args, **kwargs):
     self._log(logging.TRACE, msg, args, **kwargs)
 logging.Logger.trace = trace
 
+class InfoServiceAPI(object):
+    
+    @cherrypy.expose
+    def index(self):
+        return "Hello World"
+    
+    @cherrypy.expose
+    def generate(self, length=8):
+        return ''.join(random.sample(string.hexdigits, int(length)))
+
 
 class InfoService(object):
     
@@ -38,13 +50,39 @@ class InfoService(object):
         self.log = logging.getLogger()
         self.log.debug('InfoService class init...')
         self.config = config
+        NCHOME = '/home/jhover/git/certify/misc/ssca/intermediate/'
+        HOST = 'cloudy.rhic.bnl.gov'    
+        CERT = "%s/certs/%s.cert.pem" % (NCHOME, HOST)
+        KEY = "%s/private/%s.keynopw.pem" % (NCHOME, HOST)
+        CHAIN = "%s/certs/ca-chain.cert.pem" % (NCHOME)
+
+
         
     def run(self):
         self.log.debug('Infoservice running...')
-        while True:
-            self.log.debug("Infoservice running...")
-            time.sleep(15)
-
+          
+        cherrypy.tree.mount(InfoServiceAPI())
+        cherrypy.server.unsubscribe()
+    
+        server1 = cherrypy._cpserver.Server()
+        server1.socket_port=20334
+        server1._socket_host='0.0.0.0'
+        server1.thread_pool=30
+        server1.ssl_module = 'builtin'
+        server1.ssl_certificate = CERT
+        server1.ssl_private_key = KEY
+        server1.ssl_certificate_chain = CHAIN
+        server1.subscribe()
+    
+        server2 = cherrypy._cpserver.Server()
+        server2.socket_port=20333
+        server2._socket_host="0.0.0.0"
+        server2.thread_pool=30
+        server2.subscribe()
+    
+        cherrypy.engine.start()
+        cherrypy.engine.block()   
+    
 
 class InfoServiceCLI(object):
     """class to handle the command line invocation of APF. 
