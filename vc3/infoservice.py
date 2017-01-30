@@ -21,19 +21,24 @@ import socket
 import sys
 import threading
 import time
+import traceback
 
 from optparse import OptionParser
 from ConfigParser import ConfigParser
 
 
 # Add TRACE log level 
-logging.TRACE = 5
-logging.addLevelName(logging.TRACE, 'TRACE')
-def trace(self, msg, *args, **kwargs):
-    self._log(logging.TRACE, msg, args, **kwargs)
-logging.Logger.trace = trace
+#logging.TRACE = 5
+#logging.addLevelName(logging.TRACE, 'TRACE')
+#def trace(self, msg, *args, **kwargs):
+#    self._log(logging.TRACE, msg, args, **kwargs)
+#logging.Logger.trace = trace
 
 class InfoServiceAPI(object):
+    
+    def __init__(self):
+        self.documents = {}
+        
     
     @cherrypy.expose
     def index(self):
@@ -42,7 +47,14 @@ class InfoServiceAPI(object):
     @cherrypy.expose
     def generate(self, length=8):
         return ''.join(random.sample(string.hexdigits, int(length)))
+  
+    @cherrypy.expose
+    def storedocument(self, key, doc   ):
+        self.documents[key] = doc
+        return "Document stored for key %s" % key
 
+    def getdocument(self, key):
+        return '%s' % self.documents[key]
 
 class InfoService(object):
     
@@ -50,13 +62,14 @@ class InfoService(object):
         self.log = logging.getLogger()
         self.log.debug('InfoService class init...')
         self.config = config
-        NCHOME = '/home/jhover/git/certify/misc/ssca/intermediate/'
-        HOST = 'cloudy.rhic.bnl.gov'    
-        CERT = "%s/certs/%s.cert.pem" % (NCHOME, HOST)
-        KEY = "%s/private/%s.keynopw.pem" % (NCHOME, HOST)
-        CHAIN = "%s/certs/ca-chain.cert.pem" % (NCHOME)
-
-
+        self.certfile = os.path.expanduser(config.get('netcomm','certfile'))
+        self.keyfile = os.path.expanduser(config.get('netcomm', 'keyfile'))
+        self.chainfile = os.path.expanduser(config.get('netcomm','chainfile'))
+        self.httpport = int(config.get('netcomm','httpport'))
+        self.httpsport = int(config.get('netcomm','httpsport'))
+        self.sslmodule = config.get('netcomm','sslmodule')
+        
+        self.log.debug('InfoService class done.')
         
     def run(self):
         self.log.debug('Infoservice running...')
@@ -65,17 +78,17 @@ class InfoService(object):
         cherrypy.server.unsubscribe()
     
         server1 = cherrypy._cpserver.Server()
-        server1.socket_port=20334
+        server1.socket_port=self.httpsport
         server1._socket_host='0.0.0.0'
         server1.thread_pool=30
         server1.ssl_module = 'builtin'
-        server1.ssl_certificate = CERT
-        server1.ssl_private_key = KEY
-        server1.ssl_certificate_chain = CHAIN
+        server1.ssl_certificate = self.certfile
+        server1.ssl_private_key = self.keyfile
+        server1.ssl_certificate_chain = self.chainfile
         server1.subscribe()
     
         server2 = cherrypy._cpserver.Server()
-        server2.socket_port=20333
+        server2.socket_port=self.httpport
         server2._socket_host="0.0.0.0"
         server2.thread_pool=30
         server2.subscribe()
@@ -121,12 +134,12 @@ John Hover <jhover@bnl.gov>
 ''', version="%prog $Id: infoservice.py 1-13-17 23:58:06Z jhover $" )
 
 
-        parser.add_option("--trace", 
-                          dest="logLevel", 
-                          default=logging.WARNING,
-                          action="store_const", 
-                          const=logging.TRACE, 
-                          help="Set logging level to TRACE [default WARNING], super verbose")
+#        parser.add_option("--trace", 
+#                          dest="logLevel", 
+#                          default=logging.WARNING,
+#                          action="store_const", 
+#                          const=logging.TRACE, 
+#                          help="Set logging level to TRACE [default WARNING], super verbose")
         parser.add_option("-d", "--debug", 
                           dest="logLevel", 
                           default=logging.WARNING,
@@ -150,7 +163,7 @@ John Hover <jhover@bnl.gov>
                           const=logging.WARNING, 
                           help="Set logging level to WARNING [default]")
         parser.add_option("--conf", dest="confFiles", 
-                          default="/etc/autopyfactory/autofactory.conf",
+                          default="/etc/vc3/vc3-infoservice.conf",
                           action="store", 
                           metavar="FILE1[,FILE2,FILE3]", 
                           help="Load configuration from FILEs (comma separated list)")
@@ -218,7 +231,7 @@ John Hover <jhover@bnl.gov>
         envmsg = ''        
         for k in sorted(os.environ.keys()):
             envmsg += '\n%s=%s' %(k, os.environ[k])
-        self.log.trace('Environment : %s' %envmsg)
+        self.log.debug('Environment : %s' %envmsg)
 
 
     def __platforminfo(self):
@@ -305,8 +318,6 @@ John Hover <jhover@bnl.gov>
         Create Daemon and enter main loop
         """
 
-        from vc3.infoservice import InfoService
-
         try:
             self.log.info('Creating Daemon and entering main loop...')
             infosrv = InfoService(self.config)
@@ -325,3 +336,8 @@ John Hover <jhover@bnl.gov>
             self.log.error(traceback.format_exc(None))
             print(traceback.format_exc(None))
             sys.exit(1)          
+
+if __name__ == '__main__':
+    print("Running from file...")
+    iscli = InfoServiceCLI()
+    iscli.run()
