@@ -27,16 +27,10 @@ from optparse import OptionParser
 from ConfigParser import ConfigParser
 
 
-# Add TRACE log level 
-#logging.TRACE = 5
-#logging.addLevelName(logging.TRACE, 'TRACE')
-#def trace(self, msg, *args, **kwargs):
-#    self._log(logging.TRACE, msg, args, **kwargs)
-#logging.Logger.trace = trace
-
 class InfoServiceAPI(object):
     
     def __init__(self):
+        self.log = logging.getLogger()
         self.documents = {}
         
     
@@ -49,11 +43,14 @@ class InfoServiceAPI(object):
         return ''.join(random.sample(string.hexdigits, int(length)))
   
     @cherrypy.expose
-    def storedocument(self, key, doc   ):
+    def storedocument(self, key, doc ):
         self.documents[key] = doc
+        self.log.debug("Document stored for key %s" % key)
         return "Document stored for key %s" % key
 
+    @cherrypy.expose
     def getdocument(self, key):
+        self.log.debug("Document retrieved for key %s" % key)
         return '%s' % self.documents[key]
 
 class InfoService(object):
