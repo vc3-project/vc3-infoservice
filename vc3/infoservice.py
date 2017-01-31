@@ -44,14 +44,22 @@ class InfoServiceAPI(object):
   
     @cherrypy.expose
     def storedocument(self, key, doc ):
+        self.log.debug("Storing document %s" % doc)
         self.documents[key] = doc
         self.log.debug("Document stored for key %s" % key)
         return "Document stored for key %s" % key
 
     @cherrypy.expose
     def getdocument(self, key):
-        self.log.debug("Document retrieved for key %s" % key)
-        return '%s' % self.documents[key]
+        d = self.documents[key]
+        self.log.debug("Document retrieved for key %s with val %s" % (key,d))
+        #d = self.stripquotes(d)
+        #self.log.debug("Document minus single quotes %s" % d)
+        return d
+
+    def stripquotes(self,s):
+        rs = s.replace("'","")
+        return rs
 
 class InfoService(object):
     

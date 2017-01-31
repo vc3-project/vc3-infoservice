@@ -1,5 +1,6 @@
 #!/bin/env python
 
+import json
 import logging
 import logging.handlers
 import requests
@@ -20,20 +21,16 @@ import traceback
 from optparse import OptionParser
 from ConfigParser import ConfigParser
 
-
-
 logging.captureWarnings(True)
 
 TESTKEY='testkey'
-TESTDOC='''{
-    "uchicago_rcc": {
-        "base" : {
-            "distribution": "redhat",
-            "release": "6.7",
-            "architecture": "x86_64"
-        }
-    }
-}'''
+TESTDOC='''{"uchicago_rcc" : {
+            "base" : {
+                "distribution" : "redhat",
+                "release" : "6.7",
+                "architecture" : "x86_64"}
+                }
+            }'''
 
 class InfoClient(object):
     def __init__(self, config):
@@ -61,8 +58,7 @@ class InfoClient(object):
                             )
         try:
             r = requests.get(u, verify=self.chainfile)
-            print(r.text)
-            print(r.status_code)
+            self.log.debug(r.status_code)
         
         except requests.exceptions.ConnectionError, ce:
             print('Connection failure. %s' % ce)
@@ -74,8 +70,12 @@ class InfoClient(object):
                             )
         try:
             r = requests.get(u, verify=self.chainfile)
-            print(r.text)
-            print(r.status_code)
+            out = self.stripquotes(r.text)
+            parsed = json.loads(out)
+            pretty = json.dumps(parsed, indent=4, sort_keys=True)
+            print(pretty)
+            #print(r.text)
+            self.log.debug(r.status_code)
         
         except requests.exceptions.ConnectionError, ce:
             print('Connection failure. %s' % ce)
@@ -87,6 +87,10 @@ class InfoClient(object):
         self.log.info("Testing getdocument...")
         self.getdocument(key=TESTKEY)
         self.log.info("Done.")
+
+    def stripquotes(self,s):
+        rs = s.replace("'","")
+        return rs
 
 class InfoClientCLI(object):
     """class to handle the command line invocation of APF. 
