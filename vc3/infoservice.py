@@ -57,6 +57,9 @@ class InfoServiceAPI(object):
         #self.log.debug("Document minus single quotes %s" % d)
         return d
 
+    
+
+
     def stripquotes(self,s):
         rs = s.replace("'","")
         return rs

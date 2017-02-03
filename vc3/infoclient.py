@@ -51,13 +51,12 @@ class InfoClient(object):
     def storedocument(self, key, doc):
         doc = urllib.quote_plus(doc)
         
-        u = "https://%s:%s/storedocument?key=%s&doc='%s'" % (self.infohost, 
+        u = "https://%s:%s/storedocument?key=%s" % (self.infohost, 
                             self.httpsport,
-                            key,
-                            doc
+                            key
                             )
         try:
-            r = requests.get(u, verify=self.chainfile)
+            r = requests.put(u, verify=self.chainfile,data=doc)
             self.log.debug(r.status_code)
         
         except requests.exceptions.ConnectionError, ce:
