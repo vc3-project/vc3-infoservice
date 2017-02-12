@@ -75,12 +75,18 @@ class InfoClient(object):
             out = self.stripquotes(r.text)
             parsed = json.loads(out)
             pretty = json.dumps(parsed, indent=4, sort_keys=True)
-            print(pretty)
-            #print(r.text)
+            self.log.debug(pretty)
             self.log.debug(r.status_code)
+            return r.text
         
         except requests.exceptions.ConnectionError, ce:
             print('Connection failure. %s' % ce)
+    
+    def mergedocument(self, key, document):
+        pass
+    
+    def deletedocument(self, key):
+        pass
         
     def testquery(self):
         self.log.info("Testing storedocument. Doc = %s" % TESTDOC)
@@ -89,6 +95,7 @@ class InfoClient(object):
         self.log.info("Testing getdocument...")
         self.getdocument(key=TESTKEY)
         self.log.info("Done.")
+
 
     def stripquotes(self,s):
         rs = s.replace("'","")
@@ -155,6 +162,16 @@ John Hover <jhover@bnl.gov>
                           metavar="LOGFILE", 
                           action="store", 
                           help="Send logging output to LOGFILE or SYSLOG or stdout [default <syslog>]")
+        parser.add_option("--add", dest="addfiles", 
+                          action="store", 
+                          metavar="FILE1[,FILE2,FILE3]", 
+                          help="Put info into store from JSON files with key as top-level tag.")        
+        parser.add_option("--getkey", dest="getkey", 
+                          action="store", 
+                          metavar="[resource|account|cluster|...]", 
+                          help="Get info from store with provided key.")        
+
+
         (self.options, self.args) = parser.parse_args()
         self.options.confFiles = self.options.confFiles.split(',')
 
@@ -188,14 +205,6 @@ John Hover <jhover@bnl.gov>
         logStream.setFormatter(formatter)
         self.log.addHandler(logStream)
 
-        # adding a new Handler for the console, 
-        # to be used only for DEBUG and INFO modes. 
-        if self.options.logLevel in [logging.DEBUG, logging.INFO]:
-            if self.options.console:
-                console = logging.StreamHandler(sys.stdout)
-                console.setFormatter(formatter)
-                console.setLevel(self.options.logLevel)
-                self.log.addHandler(console)
         self.log.setLevel(self.options.logLevel)
         self.log.info('Logging initialized.')
 
@@ -229,15 +238,38 @@ John Hover <jhover@bnl.gov>
                 self.log.error('Config failure')
                 sys.exit(1)
         
-        #self.config.set("global", "configfiles", self.options.confFiles)
+        #self.config.add_section('cli')
+        #self.config.set("cli", "addfiles", self.options.confFiles)
 
-    def run(self):
+    def doquery(self):
+        self.ic = InfoClient(self.config)
+        if self.options.addfiles:
+            flist = self.options.addfiles.split(',')
+            for fn in flist:
+                fname = fn.strip()
+                self.log.debug("Adding contents of file %s" % fname)
+                jdoc = open(fname).read()
+                data = json.loads(jdoc)
+                pretty = json.dumps(data, indent=4, sort_keys=True)
+                self.log.debug(pretty)
+                k = data.keys()[0]
+                self.log.debug("key is %s" % k)
+                self.ic.storedocument(k,jdoc)
+        
+        if self.options.getkey:
+            qkey = self.options.getkey.lower().strip()
+            self.log.debug("Getkey is %s, doing query" % qkey )
+            out = self.ic.getdocument(qkey)
+            print(out)
+
+    def testquery(self):
         self.ic = InfoClient(self.config)
         self.ic.testquery()
-
+        
 
 
 if __name__ == '__main__':
     logging.info("Running from .py file...")
     iccli = InfoClientCLI()
-    iccli.run()
+    iccli.doquery()
+    #iccli.testquery()

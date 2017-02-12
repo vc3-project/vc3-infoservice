@@ -183,13 +183,6 @@ Author(s):
 John Hover <jhover@bnl.gov>
 ''', version="%prog $Id: infoservice.py 1-13-17 23:58:06Z jhover $" )
 
-
-#        parser.add_option("--trace", 
-#                          dest="logLevel", 
-#                          default=logging.WARNING,
-#                          action="store_const", 
-#                          const=logging.TRACE, 
-#                          help="Set logging level to TRACE [default WARNING], super verbose")
         parser.add_option("-d", "--debug", 
                           dest="logLevel", 
                           default=logging.WARNING,
@@ -241,8 +234,6 @@ John Hover <jhover@bnl.gov>
         self.log = logging.getLogger()
         if self.options.logfile == "stdout":
             logStream = logging.StreamHandler()
-        elif self.options.logfile == 'syslog':
-            logStream = logging.handlers.SysLogHandler('/dev/log')
         else:
             lf = self.options.logfile
             logdir = os.path.dirname(lf)
