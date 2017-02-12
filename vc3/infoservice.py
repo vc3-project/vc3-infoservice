@@ -1,5 +1,4 @@
 #! /usr/bin/env python
-
 __author__ = "John Hover, Jose Caballero"
 __copyright__ = "2017 John Hover"
 __credits__ = []
@@ -8,6 +7,7 @@ __version__ = "0.9.1"
 __maintainer__ = "John Hover"
 __email__ = "jhover@bnl.gov"
 __status__ = "Production"
+
 
 import cherrypy
 import logging
@@ -26,39 +26,76 @@ import traceback
 from optparse import OptionParser
 from ConfigParser import ConfigParser
 
+# Since script is in package "vc3" we can know what to add to path for 
+# running directly during development
+(libpath,tail) = os.path.split(sys.path[0])
+sys.path.append(libpath)
 
-class InfoServiceAPI(object):
+from vc3.plugin import PluginManager
+
+class InfoHandler(object):
+    '''
+    Handles persistence of information from service using back-end plugin. 
     
-    def __init__(self):
+    '''
+    def __init__(self, config):
         self.log = logging.getLogger()
-        self.documents = {}
+        self.log.debug("Initializing Info Handler...")
+        self.config = config
         
+        # Get persistence plugin
+        pluginname = config.get('persistence','plugin')
+        psect = "plugin-%s" % pluginname.lower()
+        pm = PluginManager()
+        self.log.debug("Creating persistence plugin...")
+        self.persist = pm.getplugin(self, ['vc3', 'plugins', 'persist'], pluginname, self.config, psect)
+        self.log.debug("Done initting InfoHandler")
+
+    def storedocument(self, key, doc):
+        self.persist.storedocument(key,doc)
+   
     
+    def getdocument(self, key):
+        d = self.persist.getdocument(key)
+        return d
+
+
+class InfoRoot(object):
+
     @cherrypy.expose
     def index(self):
-        return "Hello World"
-    
+        return "Nothing to see. Go to /info"    
+
     @cherrypy.expose
     def generate(self, length=8):
         return ''.join(random.sample(string.hexdigits, int(length)))
-  
-    @cherrypy.expose
-    def storedocument(self, key, doc ):
-        self.log.debug("Storing document %s" % doc)
-        self.documents[key] = doc
-        self.log.debug("Document stored for key %s" % key)
-        return "Document stored for key %s" % key
 
-    @cherrypy.expose
-    def getdocument(self, key):
-        d = self.documents[key]
+class InfoServiceAPI(object):
+    exposed = True 
+    
+    def __init__(self, config):
+        self.log = logging.getLogger()
+        self.log.debug("Initting InfoServiceAPI...")
+        self.infohandler = InfoHandler(config)
+        self.log.debug("InfoServiceAPI init done." )
+    
+    def GET(self, key):
+        d = self.infohandler.getdocument(key) 
         self.log.debug("Document retrieved for key %s with val %s" % (key,d))
-        #d = self.stripquotes(d)
-        #self.log.debug("Document minus single quotes %s" % d)
         return d
 
-    
-
+    @cherrypy.tools.accept(media='text/plain')
+    def PUT(self, key, data):
+        self.log.debug("Storing document %s" % data)
+        self.infohandler.storedocument(key, data)
+        self.log.debug("Document stored for key %s" % key)
+        return "Document stored for key %s\n" % key
+        
+    def POST(self):
+        pass
+        
+    def DELETE(self):
+        pass
 
     def stripquotes(self,s):
         rs = s.replace("'","")
@@ -82,7 +119,12 @@ class InfoService(object):
     def run(self):
         self.log.debug('Infoservice running...')
           
-        cherrypy.tree.mount(InfoServiceAPI())
+        cherrypy.tree.mount(InfoRoot())
+        cherrypy.tree.mount(InfoServiceAPI(self.config),'/info',
+                                {'/':
+        {'request.dispatch': cherrypy.dispatch.MethodDispatcher()}
+    })
+        #cherrypy.tree.mount(InfoServiceAPI(self.config))
         cherrypy.server.unsubscribe()
     
         server1 = cherrypy._cpserver.Server()
@@ -176,7 +218,7 @@ John Hover <jhover@bnl.gov>
                           metavar="FILE1[,FILE2,FILE3]", 
                           help="Load configuration from FILEs (comma separated list)")
         parser.add_option("--log", dest="logfile", 
-                          default="syslog", 
+                          default="stdout", 
                           metavar="LOGFILE", 
                           action="store", 
                           help="Send logging output to LOGFILE or SYSLOG or stdout [default <syslog>]")

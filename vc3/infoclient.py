@@ -21,7 +21,9 @@ import traceback
 from optparse import OptionParser
 from ConfigParser import ConfigParser
 
+urllib3.disable_warnings()
 logging.captureWarnings(True)
+
 
 TESTKEY='testkey'
 TESTDOC='''{"uchicago_rcc" : {
@@ -49,21 +51,22 @@ class InfoClient(object):
     # test storedocument?key=X,doc=y, 
     # test getdocument?key=X
     def storedocument(self, key, doc):
-        doc = urllib.quote_plus(doc)
+        #doc = urllib.quote_plus(doc)
         
-        u = "https://%s:%s/storedocument?key=%s" % (self.infohost, 
+        u = "https://%s:%s/info?key=%s" % (self.infohost, 
                             self.httpsport,
                             key
                             )
+        self.log.debug("Trying to store document %s at %s" % (doc, u))
         try:
-            r = requests.put(u, verify=self.chainfile,data=doc)
+            r = requests.put(u, verify=self.chainfile, params={'data' : doc})
             self.log.debug(r.status_code)
         
         except requests.exceptions.ConnectionError, ce:
             print('Connection failure. %s' % ce)
 
     def getdocument(self, key):
-        u = "https://%s:%s/getdocument?key=%s" % (self.infohost, 
+        u = "https://%s:%s/info?key=%s" % (self.infohost, 
                             self.httpsport,
                             key
                             )
@@ -137,11 +140,6 @@ John Hover <jhover@bnl.gov>
                           action="store_const", 
                           const=logging.INFO, 
                           help="Set logging level to INFO [default WARNING]")
-        parser.add_option("--console", 
-                          dest="console", 
-                          default=False,
-                          action="store_true", 
-                          help="Forces debug and info messages to be sent to the console")
         parser.add_option("--quiet", dest="logLevel", 
                           default=logging.WARNING,
                           action="store_const", 
