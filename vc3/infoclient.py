@@ -1,4 +1,4 @@
-#!/bin/env python
+#! python2.7
 
 import json
 import logging
@@ -182,8 +182,6 @@ John Hover <jhover@bnl.gov>
         self.log = logging.getLogger()
         if self.options.logfile == "stdout":
             logStream = logging.StreamHandler()
-        elif self.options.logfile == 'syslog':
-            logStream = logging.handlers.SysLogHandler('/dev/log')
         else:
             lf = self.options.logfile
             logdir = os.path.dirname(lf)

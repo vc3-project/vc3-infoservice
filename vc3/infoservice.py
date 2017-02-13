@@ -114,6 +114,10 @@ class InfoService(object):
         self.httpsport = int(config.get('netcomm','httpsport'))
         self.sslmodule = config.get('netcomm','sslmodule')
         
+        self.log.debug("certfile=%s" % self.certfile)
+        self.log.debug("keyfile=%s" % self.keyfile)
+        self.log.debug("chainfile=%s" % self.chainfile)
+        
         self.log.debug('InfoService class done.')
         
     def run(self):
