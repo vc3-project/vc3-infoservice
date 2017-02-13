@@ -1,0 +1,16 @@
+{
+    "request" : {
+        "jhover-000001" : {
+            "vcid" : "000001",
+            "factories" : {
+                "default" : {
+                    "queuesconf" : "queues.conf contents."
+                },
+                "mfa-sdcc-jhover" : {
+                     "queuesconf" : "queues.conf contents.",
+                     "pin" : "1234"
+                }
+            }
+        }
+    }
+}
