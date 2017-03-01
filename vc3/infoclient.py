@@ -57,7 +57,7 @@ class InfoClient(object):
                             )
         self.log.debug("Trying to store document %s at %s" % (doc, u))
         try:
-            r = requests.put(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : doc})
+            r = requests.post(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : doc})
             self.log.debug(r.status_code)
         
         except requests.exceptions.ConnectionError, ce:
@@ -81,7 +81,18 @@ class InfoClient(object):
             print('Connection failure. %s' % ce)
     
     def mergedocument(self, key, document):
-        pass
+                
+        u = "https://%s:%s/info?key=%s" % (self.infohost, 
+                            self.httpsport,
+                            key
+                            )
+        self.log.debug("Trying to merge document %s at %s" % (doc, u))
+        try:
+            r = requests.put(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : doc})
+            self.log.debug(r.status_code)
+        
+        except requests.exceptions.ConnectionError, ce:
+            print('Connection failure. %s' % ce)
     
     def deletedocument(self, key):
         pass

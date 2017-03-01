@@ -1,0 +1,11 @@
+{
+    "resource" : {
+        "bnl_sdcc_openstack": {
+            "cloud": {
+                "endpoint" : "http://cldext02.usatlas.bnl.gov:8773/services/Cloud",
+                "type": "nova",
+                "version": "Icehouse"
+            }
+        }
+    }
+}

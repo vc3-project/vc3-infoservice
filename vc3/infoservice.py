@@ -16,6 +16,7 @@ import os
 import platform
 import pwd
 import random
+import simplejson
 import string
 import socket
 import sys
@@ -35,8 +36,8 @@ from vc3.plugin import PluginManager
 
 class InfoHandler(object):
     '''
-    Handles persistence of information from service using back-end plugin. 
-    
+    Handles low-level operations and persistence of information 
+    from service using back-end plugin. 
     '''
     def __init__(self, config):
         self.log = logging.getLogger()
@@ -52,13 +53,26 @@ class InfoHandler(object):
         self.log.debug("Done initting InfoHandler")
 
     def storedocument(self, key, doc):
+        self.log.debug("Storing document for key %s" % key)
         self.persist.storedocument(key,doc)
    
+    def mergedocument(self, key, doc):
+        dcurrent = self.persist.getdocument(key)
+        newdoc = self.mergejson(dcurrent, doc)
+        self.log.debug("Merging document for key %s" % key)
+        self.persist.storedocument(key, newdoc)
     
     def getdocument(self, key):
         d = self.persist.getdocument(key)
         return d
 
+    def mergejson(self, doc1, doc2):
+        jd1 = json.loads(doc1)
+        self.log.debug('doc1 is %s d' % jd1 )
+        jd2 = json.loads(doc2)
+        self.log.debug('doc2 is %s' % jd2)
+        return jd1
+        
 
 class InfoRoot(object):
 
@@ -87,12 +101,15 @@ class InfoServiceAPI(object):
     @cherrypy.tools.accept(media='text/plain')
     def PUT(self, key, data):
         self.log.debug("Storing document %s" % data)
-        self.infohandler.storedocument(key, data)
+        self.infohandler.mergedocument(key, data)
         self.log.debug("Document stored for key %s" % key)
         return "Document stored for key %s\n" % key
         
-    def POST(self):
-        pass
+    def POST(self, key, data):
+        self.log.debug("Storing document %s" % data)
+        self.infohandler.storedocument(key, data)
+        self.log.debug("Document stored for key %s" % key)
+        return "Document stored for key %s\n" % key
         
     def DELETE(self):
         pass
@@ -141,20 +158,20 @@ class InfoService(object):
         server1.ssl_certificate_chain = self.chainfile
         server1.subscribe()
     
-        server2 = cherrypy._cpserver.Server()
-        server2.socket_port=self.httpport
-        server2._socket_host="0.0.0.0"
-        server2.thread_pool=30
-        server2.subscribe()
+        #server2 = cherrypy._cpserver.Server()
+        #server2.socket_port=self.httpport
+        #server2._socket_host="0.0.0.0"
+        #server2.thread_pool=30
+        #server2.subscribe()
     
         cherrypy.engine.start()
         cherrypy.engine.block()   
     
 
 class InfoServiceCLI(object):
-    """class to handle the command line invocation of APF. 
+    """class to handle the command line invocation of service. 
        parse the input options,
-       setup everything, and run Factory class
+       setup everything, and run InfoService class
     """
     def __init__(self):
         self.options = None 
@@ -268,7 +285,7 @@ John Hover <jhover@bnl.gov>
                 console.setLevel(self.options.logLevel)
                 self.log.addHandler(console)
         self.log.setLevel(self.options.logLevel)
-        self.log.info('Logging initialized.')
+        self.log.info('Logging initialized at level %s.' % self.options.logLevel)
 
 
     def _printenv(self):
