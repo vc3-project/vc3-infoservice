@@ -1,4 +1,4 @@
-#! python2.7
+#! /usr/bin/env python
 
 import json
 import logging
@@ -48,8 +48,6 @@ class InfoClient(object):
       
         self.log.debug("Client initialized.")
 
-    # test storedocument?key=X,doc=y, 
-    # test getdocument?key=X
     def storedocument(self, key, doc):
         #doc = urllib.quote_plus(doc)
         
@@ -59,7 +57,7 @@ class InfoClient(object):
                             )
         self.log.debug("Trying to store document %s at %s" % (doc, u))
         try:
-            r = requests.put(u, verify=self.chainfile, params={'data' : doc})
+            r = requests.put(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : doc})
             self.log.debug(r.status_code)
         
         except requests.exceptions.ConnectionError, ce:
@@ -71,7 +69,7 @@ class InfoClient(object):
                             key
                             )
         try:
-            r = requests.get(u, verify=self.chainfile)
+            r = requests.get(u, verify=self.chainfile, cert=(self.certfile, self.keyfile))
             out = self.stripquotes(r.text)
             parsed = json.loads(out)
             pretty = json.dumps(parsed, indent=4, sort_keys=True)
@@ -187,9 +185,6 @@ John Hover <jhover@bnl.gov>
             logdir = os.path.dirname(lf)
             if not os.path.exists(logdir):
                 os.makedirs(logdir)
-            runuid = pwd.getpwnam(self.options.runAs).pw_uid
-            rungid = pwd.getpwnam(self.options.runAs).pw_gid                  
-            os.chown(logdir, runuid, rungid)
             logStream = logging.FileHandler(filename=lf)    
 
         # Check python version 
