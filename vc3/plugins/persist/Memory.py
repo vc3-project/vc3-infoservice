@@ -20,7 +20,7 @@ class Memory(object):
         try:
             s = self.documents[key]
         except KeyError, e:
-            s = "{}"
+            s = {}
         return s
         
         

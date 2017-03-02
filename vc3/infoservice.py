@@ -16,7 +16,7 @@ import os
 import platform
 import pwd
 import random
-import simplejson
+import json
 import string
 import socket
 import sys
@@ -37,7 +37,10 @@ from vc3.plugin import PluginManager
 class InfoHandler(object):
     '''
     Handles low-level operations and persistence of information 
-    from service using back-end plugin. 
+    from service using back-end plugin.
+    
+    Data at this level is converted to/from native Python objects for storage/retrieval
+     
     '''
     def __init__(self, config):
         self.log = logging.getLogger()
@@ -54,25 +57,60 @@ class InfoHandler(object):
 
     def storedocument(self, key, doc):
         self.log.debug("Storing document for key %s" % key)
-        self.persist.storedocument(key,doc)
+        pd = json.loads(doc)
+        self.persist.storedocument(key, pd)
    
     def mergedocument(self, key, doc):
+        self.log.debug("input doc to merge is type %s" % type(doc))
         dcurrent = self.persist.getdocument(key)
-        newdoc = self.mergejson(dcurrent, doc)
+        self.log.debug("current retrieved doc is type %s" % type(dcurrent))
+        md = json.loads(doc)
+        self.log.debug("doc to merge is type %s" % type(md))
+        newdoc = self.merge( md, dcurrent)
         self.log.debug("Merging document for key %s" % key)
         self.persist.storedocument(key, newdoc)
     
     def getdocument(self, key):
-        d = self.persist.getdocument(key)
-        return d
+        '''
+        Gets JSON representation of document. 
+        '''
+        pd = self._getpythondocument(key)
+        jd = json.dumps(pd)
+        self.log.debug("d is type %s" % type(jd))
+        return jd
 
-    def mergejson(self, doc1, doc2):
-        jd1 = json.loads(doc1)
-        self.log.debug('doc1 is %s d' % jd1 )
-        jd2 = json.loads(doc2)
-        self.log.debug('doc2 is %s' % jd2)
-        return jd1
-        
+    def _getpythondocument(self, key):
+        '''
+        Gets Python object. 
+        '''
+        d = self.persist.getdocument(key)
+        self.log.debug("d is type %s" % type(d))
+        return d
+   
+    def merge(self, source, destination):
+        """
+        merges nested python dictionaries.
+        run me with nosetests --with-doctest file.py
+    
+        >>> a = { 'first' : { 'all_rows' : { 'pass' : 'dog', 'number' : '1' } } }
+        >>> b = { 'first' : { 'all_rows' : { 'fail' : 'cat', 'number' : '5' } } }
+        >>> merge(b, a) == { 'first' : { 'all_rows' : { 'pass' : 'dog', 'fail' : 'cat', 'number' : '5' } } }
+        True
+        """
+        self.log.debug("source is type %s" % type(source))
+        self.log.debug("destination is type %s" % type(destination))
+        for key, value in source.items():
+            self.log.debug("processing node %s" % key)
+            if isinstance(value, dict):
+                # get node or create one
+                node = destination.setdefault(key, {})
+                self.merge(value, node)
+            else:
+                destination[key] = value
+        return destination
+    
+    
+    
 
 class InfoRoot(object):
 
@@ -85,6 +123,7 @@ class InfoRoot(object):
         return ''.join(random.sample(string.hexdigits, int(length)))
 
 class InfoServiceAPI(object):
+    "Data at this level is assumed to be  JSON text/plain"
     exposed = True 
     
     def __init__(self, config):

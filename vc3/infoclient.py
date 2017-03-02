@@ -80,7 +80,7 @@ class InfoClient(object):
         except requests.exceptions.ConnectionError, ce:
             print('Connection failure. %s' % ce)
     
-    def mergedocument(self, key, document):
+    def mergedocument(self, key, doc):
                 
         u = "https://%s:%s/info?key=%s" % (self.infohost, 
                             self.httpsport,
@@ -174,7 +174,7 @@ John Hover <jhover@bnl.gov>
         parser.add_option("--add", dest="addfiles", 
                           action="store", 
                           metavar="FILE1[,FILE2,FILE3]", 
-                          help="Put info into store from JSON files with key as top-level tag.")        
+                          help="Merge info into store from JSON files with key as top-level tag.")        
         parser.add_option("--getkey", dest="getkey", 
                           action="store", 
                           metavar="[resource|account|cluster|...]", 
@@ -258,7 +258,7 @@ John Hover <jhover@bnl.gov>
                 self.log.debug(pretty)
                 k = data.keys()[0]
                 self.log.debug("key is %s" % k)
-                self.ic.storedocument(k,jdoc)
+                self.ic.mergedocument(k,jdoc)
         
         if self.options.getkey:
             qkey = self.options.getkey.lower().strip()
