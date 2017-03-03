@@ -295,7 +295,7 @@ John Hover <jhover@bnl.gov>
         if self.options.logfile == "stdout":
             logStream = logging.StreamHandler()
         else:
-            lf = self.options.logfile
+            lf = os.path.expanduser(self.options.logfile)
             logdir = os.path.dirname(lf)
             if not os.path.exists(logdir):
                 os.makedirs(logdir)
