@@ -106,6 +106,7 @@ setup(
     maintainer_email='jhover@bnl.gov',
     url='https://github.com/vc3-project',
     packages=['vc3',
+              'vc3.plugins',
               ],
     scripts = [ # Utilities and main script
                'scripts/vc3-info-service',
