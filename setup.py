@@ -19,7 +19,7 @@ from distutils.command.install_data import install_data as install_data_org
 
 #libexec_files = ['libexec/%s' %file for file in os.listdir('libexec') if os.path.isfile('libexec/%s' %file)]
 
-systemd_files = [ 'etc/vc3-service-info.service'
+systemd_files = [ 'etc/vc3-infoservice.service'
                  ]
 
 etc_files = ['etc/vc3-infoservice.conf',
@@ -30,9 +30,9 @@ sysconfig_files = [
              'etc/sysconfig/vc3-infoservice',
              ]
 
-logrotate_files = ['etc/logrotate/vc3-info-service',]
+logrotate_files = ['etc/logrotate/vc3-infoservice',]
 
-initd_files = ['etc/vc3-info-service.init',  ]
+initd_files = ['etc/vc3-infoservice.init',  ]
 
 rpm_data_files=[
                 #('/usr/libexec', libexec_files),

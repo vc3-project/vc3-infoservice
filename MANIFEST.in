@@ -7,4 +7,5 @@ include libexec/*
 include misc/*
 include docs/*
 include docs/man/*
+include scripts/*
 recursive-include vc3 *.py *.pyc *.pyo
