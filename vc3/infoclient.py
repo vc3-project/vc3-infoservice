@@ -167,7 +167,7 @@ John Hover <jhover@bnl.gov>
                           metavar="FILE1[,FILE2,FILE3]", 
                           help="Load configuration from FILEs (comma separated list)")
         parser.add_option("--log", dest="logfile", 
-                          default="syslog", 
+                          default="stdout", 
                           metavar="LOGFILE", 
                           action="store", 
                           help="Send logging output to LOGFILE or SYSLOG or stdout [default <syslog>]")

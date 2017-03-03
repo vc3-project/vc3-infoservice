@@ -439,6 +439,5 @@ John Hover <jhover@bnl.gov>
             sys.exit(1)          
 
 if __name__ == '__main__':
-    print("Running from file...")
     iscli = InfoServiceCLI()
     iscli.run()
