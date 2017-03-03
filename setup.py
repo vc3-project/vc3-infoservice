@@ -33,11 +33,11 @@ libexec_files = ['libexec/%s' %file for file in os.listdir('libexec') if os.path
 systemd_files = [ 'etc/vc3-service-info.service'
                  ]
 
-etc_files = ['etc/vc3-info-service.conf',
+etc_files = ['etc/vc3-infoservice.conf',
              ]
 
 sysconfig_files = [
-             'etc/sysconfig/vc3-info-service',
+             'etc/sysconfig/vc3-infoservice',
 
 ]
 

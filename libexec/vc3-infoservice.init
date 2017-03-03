@@ -3,15 +3,15 @@
 SERVICENAME=vc3-info-service
 SERVICEDESC="Central information store for VC3"
 #
-#   /etc/rc.d/init.d/vc3-info-service
+#   /etc/rc.d/init.d/vc3-infoservice
 #
 # Starts the VC3 Information Service daemon
 #
 # chkconfig: 345 26 74
 # description: Submit pilot jobs to grid sites. 
 # processname: autopyfactory
-# config: /etc/vc3/vc3-info-service.conf 
-# pidfile: /var/run/vc3-info-service.pid
+# config: /etc/vc3/vc3-infoservice.conf 
+# pidfile: /var/run/vc3-infoservice.pid
 #
 
 ### BEGIN INIT INFO
