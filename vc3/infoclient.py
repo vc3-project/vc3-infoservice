@@ -1,27 +1,29 @@
 #! /usr/bin/env python
+__author__ = "John Hover, Jose Caballero"
+__copyright__ = "2017 John Hover"
+__credits__ = []
+__license__ = "GPL"
+__version__ = "0.9.1"
+__maintainer__ = "John Hover"
+__email__ = "jhover@bnl.gov"
+__status__ = "Production"
 
 import json
 import logging
 import logging.handlers
 import requests
 import urllib
-import urllib3
 import os
 import platform
-#import pwd
-#import random
-#import string
-#import socket
-import requests
 import sys
-#import threading
 import time
 import traceback
 
 from optparse import OptionParser
 from ConfigParser import ConfigParser
 
-urllib3.disable_warnings()
+import requests
+requests.packages.urllib3.disable_warnings()
 logging.captureWarnings(True)
 
 
