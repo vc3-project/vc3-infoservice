@@ -144,7 +144,7 @@ This program is licenced under the GPL, as set out in LICENSE file.
 
 Author(s):
 John Hover <jhover@bnl.gov>
-''', version="%prog $Id: infocliente.py 1-31-17 23:58:06Z jhover $" )
+''', version="%prog $Id: infoclient.py 1-31-17 23:58:06Z jhover $" )
 
         parser.add_option("-d", "--debug", 
                           dest="logLevel", 

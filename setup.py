@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 #
-# Setup prog for autopyfactory
-#
-#
-# Since script is in package "certify" we can know what to add to path
+# Setup prog for infoservice
 
 import commands
 import os
