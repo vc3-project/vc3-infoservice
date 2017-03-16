@@ -75,7 +75,8 @@ class PluginManager(object):
         section: the section name in the config object that is relevant for this plugin
         '''
         p = self._getplugin(parent, paths, name, config, section)
-        self.log.info('returning a plugin = %s' %p)
+        self.log.info('returning a plugin = %s' % p)
+
         return p
 
 
@@ -90,8 +91,11 @@ class PluginManager(object):
         """
         self.log.debug('Starting')
         ko = self._getpluginclass(paths, name)
+        po = None
+
         po = ko(parent, config, section)
-        self.log.debug('Leaving, returning %s' %po)
+        self.log.debug('Leaving, returning %s' % po)
+
         return po
     
         
@@ -106,13 +110,17 @@ class PluginManager(object):
         ppath = '.'.join(paths)
         ppath = ppath + '.' + name
         
+        plugin_class = None
         try:
             self.log.debug("trying to import %s from %s" %(name, ppath))
+
             plugin_module = __import__(ppath, globals(), locals(), name)
+            plugin_class = getattr(plugin_module, name)
+
+            self.log.debug("Retrieved plugin with class name %s" % name)
         except Exception, ex:
             self.log.error(ex)
+            raise ex
     
-        plugin_class = getattr(plugin_module, name)
-        self.log.debug("Retrieved plugin with class name %s" % name)
         return plugin_class
 
