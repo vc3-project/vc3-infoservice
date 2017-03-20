@@ -32,7 +32,7 @@ from ConfigParser import ConfigParser
 (libpath,tail) = os.path.split(sys.path[0])
 sys.path.append(libpath)
 
-from vc3.plugin import PluginManager
+from pluginmanager.plugin import PluginManager
 
 class InfoHandler(object):
     '''
