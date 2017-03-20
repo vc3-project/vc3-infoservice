@@ -83,7 +83,6 @@ setup(
     maintainer='John Hover',
     maintainer_email='jhover@bnl.gov',
     url='https://github.com/vc3-project',
-    py_modules = ['plugin'],
     packages=['vc3',
               'vc3.plugins',
               ],
