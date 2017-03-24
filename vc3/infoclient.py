@@ -95,6 +95,24 @@ class InfoClient(object):
         
         except requests.exceptions.ConnectionError, ce:
             print('Connection failure. %s' % ce)
+
+    def getbranch(self, key, *keys):
+        doc = self.getdocument(key = key)
+        if not doc:
+            return None
+
+        ds = json.loads(doc)
+        good_keys = [key]
+
+        for k in keys:
+            if k in ds:
+                ds = ds[k]
+            else:
+                raise Exception('Succesful keys: ' + str(good_keys))
+
+        return ds
+
+
     
     def deletedocument(self, key):
         pass
