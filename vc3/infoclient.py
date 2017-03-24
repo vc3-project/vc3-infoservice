@@ -297,9 +297,12 @@ John Hover <jhover@bnl.gov>
         self.ic.testquery()
         
 
+    def run(self):
+        self.doquery()
+        #self.testquery()
 
 if __name__ == '__main__':
     logging.info("Running from .py file...")
     iccli = InfoClientCLI()
-    iccli.doquery()
-    #iccli.testquery()
+    iccli.run()
+

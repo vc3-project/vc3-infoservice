@@ -89,6 +89,7 @@ setup(
               ],
     scripts = [ # Utilities and main script
                'scripts/vc3-info-service',
+               'scripts/vc3-info-client',
               ],
     
     data_files = choose_data_files()

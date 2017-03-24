@@ -447,3 +447,4 @@ John Hover <jhover@bnl.gov>
 if __name__ == '__main__':
     iscli = InfoServiceCLI()
     iscli.run()
+
