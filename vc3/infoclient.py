@@ -75,8 +75,8 @@ class InfoClient(object):
             out = self.stripquotes(r.text)
             parsed = json.loads(out)
             pretty = json.dumps(parsed, indent=4, sort_keys=True)
-            self.log.debug(pretty)
-            self.log.debug(r.status_code)
+            #self.log.debug(pretty)
+            #self.log.debug(r.status_code)
             return r.text
         
         except requests.exceptions.ConnectionError, ce:
