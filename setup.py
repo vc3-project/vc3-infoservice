@@ -85,6 +85,7 @@ setup(
     url='https://github.com/vc3-project',
     packages=['vc3',
               'vc3.plugins',
+              'vc3.plugins.persist'
               ],
     scripts = [ # Utilities and main script
                'scripts/vc3-info-service',
