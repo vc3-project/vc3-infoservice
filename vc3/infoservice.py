@@ -52,7 +52,11 @@ class InfoHandler(object):
         psect = "plugin-%s" % pluginname.lower()
         pm = PluginManager()
         self.log.debug("Creating persistence plugin...")
-        self.persist = pm.getplugin(self, ['vc3', 'plugins', 'persist'], pluginname, self.config, psect)
+        self.persist = pm.getplugin(parent=self, 
+                                    paths=['vc3', 'plugins', 'persist'], 
+                                    name=pluginname, 
+                                    config=self.config, 
+                                    section=psect)
         self.log.debug("Done initting InfoHandler")
 
     def storedocument(self, key, doc):
