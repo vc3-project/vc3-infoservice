@@ -75,8 +75,8 @@ class InfoClient(object):
             out = self.stripquotes(r.text)
             parsed = json.loads(out)
             pretty = json.dumps(parsed, indent=4, sort_keys=True)
-            self.log.debug(pretty)
-            self.log.debug(r.status_code)
+            #self.log.debug(pretty)
+            #self.log.debug(r.status_code)
             return r.text
         
         except requests.exceptions.ConnectionError, ce:
@@ -95,6 +95,22 @@ class InfoClient(object):
         
         except requests.exceptions.ConnectionError, ce:
             print('Connection failure. %s' % ce)
+
+    def getbranch(self, *keys):
+        doc = self.getdocument(key = keys[0])
+        if not doc:
+            return None
+
+        ds = json.loads(doc)
+        good_keys = []
+
+        for k in keys:
+            if k in ds:
+                ds = ds[k]
+            else:
+                raise Exception('Succesful keys: ' + str(good_keys))
+
+        return ds
     
     def deletedocument(self, key):
         pass
@@ -163,11 +179,17 @@ John Hover <jhover@bnl.gov>
                           action="store_const", 
                           const=logging.WARNING, 
                           help="Set logging level to WARNING [default]")
+
+        default_conf = "~/etc/vc3/vc3-infoclient.conf"
+        if 'VC3_SERVICES_HOME' in os.environ:
+            default_conf = os.path.join(os.environ['VC3_SERVICES_HOME'], 'etc', 'vc3-infoclient.conf') + ',' + default_conf
+
         parser.add_option("--conf", dest="confFiles", 
-                          default="~/etc/vc3/vc3-infoclient.conf",
+                          default=default_conf,
                           action="store", 
                           metavar="FILE1[,FILE2,FILE3]", 
                           help="Load configuration from FILEs (comma separated list)")
+
         parser.add_option("--log", dest="logfile", 
                           default="stdout", 
                           metavar="LOGFILE", 
@@ -273,9 +295,12 @@ John Hover <jhover@bnl.gov>
         self.ic.testquery()
         
 
+    def run(self):
+        self.doquery()
+        #self.testquery()
 
 if __name__ == '__main__':
     logging.info("Running from .py file...")
     iccli = InfoClientCLI()
-    iccli.doquery()
-    #iccli.testquery()
+    iccli.run()
+

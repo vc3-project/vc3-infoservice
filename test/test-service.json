@@ -1,0 +1,10 @@
+{ "request": { 
+    "waldo.hex" : {
+        "action" : "spawn",
+        "services" : {
+            "vc3-test-service": {
+                "action" : "spawn",
+                "command" : "vc3-test-service --requestid \"$VC3_REQUESTID\"",
+                "message" : "hello"
+}}}}}
+
