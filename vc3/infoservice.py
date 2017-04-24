@@ -27,6 +27,7 @@ import traceback
 from optparse import OptionParser
 from ConfigParser import ConfigParser
 
+
 # Since script is in package "vc3" we can know what to add to path for 
 # running directly during development
 (libpath,tail) = os.path.split(sys.path[0])
@@ -195,7 +196,7 @@ class InfoService(object):
         server1.socket_port=self.httpsport
         server1._socket_host='0.0.0.0'
         server1.thread_pool=30
-        server1.ssl_module = 'builtin'
+        server1.ssl_module = self.sslmodule
         server1.ssl_certificate = self.certfile
         server1.ssl_private_key = self.keyfile
         server1.ssl_certificate_chain = self.chainfile
