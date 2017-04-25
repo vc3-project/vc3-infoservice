@@ -8,6 +8,7 @@ __maintainer__ = "John Hover"
 __email__ = "jhover@bnl.gov"
 __status__ = "Production"
 
+import base64
 import json
 import logging
 import logging.handlers
@@ -100,10 +101,8 @@ class InfoClient(object):
         doc = self.getdocument(key = keys[0])
         if not doc:
             return None
-
         ds = json.loads(doc)
         good_keys = []
-
         for k in keys:
             if k in ds:
                 ds = ds[k]
@@ -127,6 +126,14 @@ class InfoClient(object):
     def stripquotes(self,s):
         rs = s.replace("'","")
         return rs
+
+    def encode(self, string):
+        return base64.b64encode(string)
+    
+    def decode(self, string):
+        return base64.b64decode(string)
+
+
 
 class InfoClientCLI(object):
     """class to handle the command line invocation of APF. 
