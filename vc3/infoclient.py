@@ -232,7 +232,7 @@ John Hover <jhover@bnl.gov>
         if 'VC3_SERVICES_HOME' in os.environ:
             default_conf = os.path.join(os.environ['VC3_SERVICES_HOME'], 'etc', 'vc3-infoclient.conf') + ',' + default_conf
 
-        parser.add_option("--conf", dest="confFiles", 
+        parser.add_option("-c","--config", dest="confFiles", 
                           default=default_conf,
                           action="store", 
                           metavar="FILE1[,FILE2,FILE3]", 
