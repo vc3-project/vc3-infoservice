@@ -52,7 +52,10 @@ class InfoClient(object):
         self.log.debug("Client initialized.")
 
     def storedocument(self, key, doc):
-        #doc = urllib.quote_plus(doc)
+        '''
+        Store JSON string <doc> in infoservice under key <key>.
+        
+        '''
         
         u = "https://%s:%s/info?key=%s" % (self.infohost, 
                             self.httpsport,
@@ -64,9 +67,13 @@ class InfoClient(object):
             self.log.debug(r.status_code)
         
         except requests.exceptions.ConnectionError, ce:
-            print('Connection failure. %s' % ce)
+            self.log.error('Connection failure. %s' % ce)
 
     def getdocument(self, key):
+        '''
+        Get and return JSON string for document with key <key>
+                
+        '''
         u = "https://%s:%s/info?key=%s" % (self.infohost, 
                             self.httpsport,
                             key
@@ -81,7 +88,35 @@ class InfoClient(object):
             return r.text
         
         except requests.exceptions.ConnectionError, ce:
-            print('Connection failure. %s' % ce)
+            self.log.error('Connection failure. %s' % ce)
+    
+    def getdocumentobject(self, key):
+        '''
+        Get JSON doc and convert to Python and return. 
+        
+        '''
+        u = "https://%s:%s/info?key=%s" % (self.infohost, 
+                            self.httpsport,
+                            key
+                            )
+        try:
+            r = requests.get(u, verify=self.chainfile, cert=(self.certfile, self.keyfile))
+            out = self.stripquotes(r.text)
+            parsed = json.loads(out)
+            pretty = json.dumps(parsed, indent=4, sort_keys=True)
+            return parsed
+        
+        except requests.exceptions.ConnectionError, ce:
+            self.log.error('Connection failure. %s' % ce)       
+    
+    def storedocumentobject(self, dict, key):
+        '''
+        Directly store Python dictionary as JSON ...
+        
+        '''
+        jstr = json.dumps(dict)
+        self.storedocument(self,jstr,key)
+        
     
     def mergedocument(self, key, doc):
                 
@@ -95,7 +130,7 @@ class InfoClient(object):
             self.log.debug(r.status_code)
         
         except requests.exceptions.ConnectionError, ce:
-            print('Connection failure. %s' % ce)
+            self.log.error('Connection failure. %s' % ce)
 
     def getbranch(self, *keys):
         doc = self.getdocument(key = keys[0])
