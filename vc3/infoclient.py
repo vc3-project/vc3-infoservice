@@ -114,8 +114,14 @@ class InfoClient(object):
         Directly store Python dictionary as JSON ...
         
         '''
+        if key not in dict.keys():
+            td = {}
+            td[key] = dict
+            dict = td
+            
         jstr = json.dumps(dict)
-        self.storedocument(self,jstr,key)
+        self.log.debug("JSON string: %s" % jstr)
+        self.storedocument(key, jstr)
         
     
     def mergedocument(self, key, doc):
