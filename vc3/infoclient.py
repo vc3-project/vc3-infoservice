@@ -148,7 +148,7 @@ class InfoClient(object):
             if k in ds:
                 ds = ds[k]
             else:
-                raise Exception('Succesful keys: ' + str(good_keys))
+                raise Exception('Successful keys: ' + str(good_keys))
 
         return ds
     
