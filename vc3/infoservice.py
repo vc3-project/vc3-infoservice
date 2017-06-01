@@ -33,7 +33,7 @@ from ConfigParser import ConfigParser
 (libpath,tail) = os.path.split(sys.path[0])
 sys.path.append(libpath)
 
-from pluginmanager import PluginManager
+import pluginmanager as pm
 
 class InfoHandler(object):
     '''
@@ -51,7 +51,6 @@ class InfoHandler(object):
         # Get persistence plugin
         pluginname = config.get('persistence','plugin')
         psect = "plugin-%s" % pluginname.lower()
-        pm = PluginManager()
         self.log.debug("Creating persistence plugin...")
         self.persist = pm.getplugin(parent=self, 
                                     paths=['vc3', 'plugins', 'persist'], 
