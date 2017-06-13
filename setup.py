@@ -83,9 +83,9 @@ setup(
     maintainer='John Hover',
     maintainer_email='jhover@bnl.gov',
     url='https://github.com/vc3-project',
-    packages=['vc3',
-              'vc3.plugins',
-              'vc3.plugins.persist'
+    packages=['vc3infoservice',
+              'vc3infoservice.plugins',
+              'vc3infoservice.plugins.persist'
               ],
     scripts = [ # Utilities and main script
                'scripts/vc3-info-service',
