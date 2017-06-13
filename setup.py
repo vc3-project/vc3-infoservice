@@ -7,7 +7,7 @@ import os
 import re
 import sys
 
-from vc3 import infoservice
+from vc3infoservice import infoservice
 release_version=infoservice.__version__
 
 from distutils.core import setup
