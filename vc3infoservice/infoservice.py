@@ -53,7 +53,7 @@ class InfoHandler(object):
         psect = "plugin-%s" % pluginname.lower()
         self.log.debug("Creating persistence plugin...")
         self.persist = pm.getplugin(parent=self, 
-                                    paths=['vc3', 'plugins', 'persist'], 
+                                    paths=['vc3infoservice', 'plugins', 'persist'], 
                                     name=pluginname, 
                                     config=self.config, 
                                     section=psect)
