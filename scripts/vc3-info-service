@@ -2,7 +2,7 @@
 #
 # Very simple wrapper to go in /usr/bin to be executed by init script. 
 #
-from vc3.infoservice import InfoServiceCLI
+from vc3infoservice.infoservice import InfoServiceCLI
 
 def main():
     '''
