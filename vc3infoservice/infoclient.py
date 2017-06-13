@@ -25,8 +25,11 @@ from ConfigParser import ConfigParser
 
 import requests
 requests.packages.urllib3.disable_warnings()
-logging.captureWarnings(True)
-
+try:
+    logging.captureWarnings(True)
+except AttributeError:
+    # Some versions don't have this. 
+    pass
 
 TESTKEY='testkey'
 TESTDOC='''{"uchicago_rcc" : {
