@@ -113,8 +113,6 @@ class InfoHandler(object):
                 destination[key] = value
         return destination
     
-    
-    
 
 class InfoRoot(object):
 
