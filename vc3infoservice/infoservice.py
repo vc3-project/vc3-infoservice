@@ -125,7 +125,9 @@ class InfoRoot(object):
         return ''.join(random.sample(string.hexdigits, int(length)))
 
 class InfoServiceAPI(object):
-    "Data at this level is assumed to be  JSON text/plain"
+    ''' 
+        Data at this level is assumed to be  JSON text/plain.
+    '''
     exposed = True 
     
     def __init__(self, config):
@@ -159,6 +161,44 @@ class InfoServiceAPI(object):
         rs = s.replace("'","")
         return rs
 
+class PairingServiceAPI(object):
+    ''' 
+        Data at this level is assumed to be  JSON text/plain.
+    '''
+    exposed = True 
+    
+    def __init__(self, config):
+        self.log = logging.getLogger()
+        self.log.debug("Initting PairingServiceAPI...")
+        self.infohandler = InfoHandler(config)
+        self.log.debug("PairingServiceAPI init done." )
+    
+    def GET(self, key):
+        d = self.infohandler.getdocument(key) 
+        self.log.debug("Document retrieved for code %s with val %s" % (key,d))
+        return d
+
+    @cherrypy.tools.accept(media='text/plain')
+    def PUT(self, key, data):
+        self.log.debug("Storing document %s" % data)
+        self.infohandler.mergedocument(key, data)
+        self.log.debug("Document stored for key %s" % key)
+        return "Document stored for key %s\n" % key
+        
+    def POST(self, key, data):
+        self.log.debug("Storing document %s" % data)
+        self.infohandler.storedocument(key, data)
+        self.log.debug("Document stored for key %s" % key)
+        return "Document stored for key %s\n" % key
+        
+    def DELETE(self):
+        pass
+
+    def stripquotes(self,s):
+        rs = s.replace("'","")
+        return rs
+
+
 class InfoService(object):
     
     def __init__(self, config):
@@ -187,6 +227,12 @@ class InfoService(object):
         {'request.dispatch': cherrypy.dispatch.MethodDispatcher()}
     })
         #cherrypy.tree.mount(InfoServiceAPI(self.config))
+        cherrypy.tree.mount(PairingServiceAPI(self.config),'/pairing',
+                                {'/':
+        {'request.dispatch': cherrypy.dispatch.MethodDispatcher()}
+    })
+        
+        
         cherrypy.server.unsubscribe()
     
         server1 = cherrypy._cpserver.Server()
