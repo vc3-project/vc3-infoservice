@@ -218,15 +218,13 @@ class PairingClient(object):
         self.log = logging.getLogger()
         self.log.debug('InfoClient class init...')
         self.config = config
-        #self.certfile = os.path.expanduser(config.get('netcomm','certfile'))
-        #self.keyfile = os.path.expanduser(config.get('netcomm', 'keyfile'))
+        self.certfile = os.path.expanduser(config.get('netcomm','certfile'))
+        self.keyfile = os.path.expanduser(config.get('netcomm', 'keyfile'))
         self.chainfile = os.path.expanduser(config.get('netcomm','chainfile'))
         self.httpport = int(config.get('netcomm','httpport'))
         self.httpsport = int(config.get('netcomm','httpsport'))
         self.infohost = os.path.expanduser(config.get('netcomm','infohost'))
-      
         self.log.debug("Client initialized.")
-
 
 
     def getdocument(self, key):
@@ -270,7 +268,20 @@ class PairingClient(object):
         
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)       
-       
+    
+    def mergedocument(self, key, doc):
+                
+        u = "https://%s:%s/pairing?key=%s" % (self.infohost, 
+                            self.httpsport,
+                            key
+                            )
+        self.log.debug("Trying to merge document %s at %s" % (doc, u))
+        try:
+            r = requests.put(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : doc})
+            self.log.debug(r.status_code)
+        
+        except requests.exceptions.ConnectionError, ce:
+            self.log.error('Connection failure. %s' % ce)   
     
     def getPairing(self, pairingcode):
         '''
