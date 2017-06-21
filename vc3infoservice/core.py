@@ -51,10 +51,10 @@ class InfoEntity(object):
 
     def store(self, infoclient):
         '''
-        Stores this Allocation in the provided infoclient info tree. 
+        Stores this Infoentity in the provided infoclient info tree. 
         '''
         keystr = self.__class__.infokey
-        resources = infoclient.getdocumentobject(key=keystr)
+        #resources = infoclient.getdocumentobject(key=keystr)
         da = self.makeDictObject()
         self.log.debug("Dict obj: %s" % da)
         infoclient.storedocumentobject(da, key=keystr)

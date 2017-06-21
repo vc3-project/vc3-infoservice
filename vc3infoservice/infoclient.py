@@ -195,7 +195,7 @@ class InfoClient(object):
 
     def requestPairing(self, cnsubject, pairingcode):
         self.log.debug("Infoclient requestPairing(%s , %s " % (cnsubject, pairingcode))
-        po = PairingRequest(name=cnsubject, 
+        po = Pairing(name=cnsubject, 
                      state='new', 
                      acl=None, 
                      cn=cnsubject, 
@@ -206,36 +206,24 @@ class InfoClient(object):
         self.log.debug("Stored in /info/pairing..")
 
 
-
-            
-    def generateCode(self, name ):       
-        cs= ''.join(choice(ascii_uppercase) for i in range(6))
-        return("%s-%s" % (name, cs))
-
-class PairingClient(object):
+    '''
     
-    def __init__(self, config):
-        self.log = logging.getLogger()
-        self.log.debug('InfoClient class init...')
-        self.config = config
-        self.certfile = os.path.expanduser(config.get('netcomm','certfile'))
-        self.keyfile = os.path.expanduser(config.get('netcomm', 'keyfile'))
-        self.chainfile = os.path.expanduser(config.get('netcomm','chainfile'))
-        self.httpport = int(config.get('netcomm','httpport'))
-        self.httpsport = int(config.get('netcomm','httpsport'))
-        self.infohost = os.path.expanduser(config.get('netcomm','infohost'))
-        self.log.debug("Client initialized.")
+    '''
 
-
-    def getdocument(self, key):
+    def getPairing(self, pairingcode):
         '''
-        Get and return JSON string for document with key <key>
-                
+            Special call because it provided pairing code as data, along with URL
+        
+            :param str pairingcode    Code to be paired with. 
+            :return
+            :rtype (str, str)         Cert and key
         '''
-        u = "https://%s:%s/pairing?key=%s" % (self.infohost, 
+        u = "https://%s:%s/info?key=%s&pairingcode=%s" % (self.infohost, 
                             self.httpsport,
-                            key
+                            key,
+                            pairingcode
                             )
+        self.log.debug("Attempting to get pairing via URL %s" % u)
         try:
             #r = requests.get(u, verify=self.chainfile, cert=(self.certfile, self.keyfile))
             r = requests.get(u, verify=self.chainfile)
@@ -248,93 +236,22 @@ class PairingClient(object):
         
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)
-    
-    def getdocumentobject(self, key):
-        '''
-        Get JSON doc and convert to Python and return. 
-        
-        '''
-        u = "https://%s:%s/pairing?key=%s" % (self.infohost, 
-                            self.httpsport,
-                            key
-                            )
-        try:
-            #r = requests.get(u, verify=self.chainfile, cert=(self.certfile, self.keyfile))
-            r = requests.get(u, verify=self.chainfile)
-            out = self.stripquotes(r.text)
-            parsed = json.loads(out)
-            pretty = json.dumps(parsed, indent=4, sort_keys=True)
-            return parsed
-        
-        except requests.exceptions.ConnectionError, ce:
-            self.log.error('Connection failure. %s' % ce)       
-    
-    def mergedocument(self, key, doc):
-                
-        u = "https://%s:%s/pairing?key=%s" % (self.infohost, 
-                            self.httpsport,
-                            key
-                            )
-        self.log.debug("Trying to merge document %s at %s" % (doc, u))
-        try:
-            r = requests.put(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : doc})
-            self.log.debug(r.status_code)
-        
-        except requests.exceptions.ConnectionError, ce:
-            self.log.error('Connection failure. %s' % ce)   
-    
-    def getPairing(self, pairingcode):
-        '''
-            :param str pairingcode    Code to be paired with. 
-            :return
-            :rtype (str, str)         Cert and key
-        '''
-        #try:
-        pd = self.getdocument(pairingcode)
-        self.log.debug('pairing document return %s' % pd)
-        #except requests.exceptions.ConnectionError, ce:
-        #    self.log.error('Connection failure. %s' % ce)     
-        
-    def stripquotes(self,s):
-        rs = s.replace("'","")
-        return rs
-
-    def encode(self, string):
-        return base64.b64encode(string)
-    
-    def decode(self, string):
-        return base64.b64decode(string)
 
 
-class PairingRequest(InfoEntity):
-    '''
-    Represents a *request* for a pairing entry to be set up. 
-    Stores under normal /info/pairing category tree. 
-    
-    '''    
-    infokey = 'pairing'
-    infoattributes = ['name', 
-                      'state',
-                      'acl',
-                      'cn',   # common name for pair.  
-                      'pairingcode'
-                     ]
-    def __init__(self, name, state, acl, cn, pairingcode):
-        self.name = name
-        self.log = logging.getLogger()
-        self.state = state
-        self.acl = acl
-        self.cn = cn
-        self.pairingcode = pairingcode
-        
+
+            
+    def generateCode(self, name ):       
+        cs= ''.join(choice(ascii_uppercase) for i in range(6))
+        return("%s-%s" % (name, cs))
+      
 
 class Pairing(InfoEntity):
     '''
-    Represents a completed entry for a pairing.
+    Represents a request and completed entry for a pairing.
     Stored in /pairing/<code>
     
     '''    
-    infokey = None
+    infokey = 'pairing'
     infoattributes = ['name', 
                       'state',
                       'acl',
@@ -343,7 +260,7 @@ class Pairing(InfoEntity):
                       'cert',
                       'key'
                      ]
-    def __init__(self, name, state, acl, cn, pairingcode, cert, key):
+    def __init__(self, name, state, acl, cn, pairingcode, cert=None, key=None):
         self.name = name
         self.log = logging.getLogger()
         self.state = state
@@ -353,16 +270,6 @@ class Pairing(InfoEntity):
         self.cert = cert
         self.key = key
         
-    def store(self, infoclient):
-        '''
-        Stores this Allocation in the provided infoclient info tree. 
-        '''
-        keystr = self.pairingcode
-        resources = infoclient.getdocumentobject(key=keystr)
-        da = self.makeDictObject()
-        self.log.debug("Dict obj: %s" % da)
-        infoclient.storedocumentobject(da, key=keystr)
-
 
 class InfoClientCLI(object):
     """class to handle the command line invocation of APF. 
@@ -546,9 +453,8 @@ John Hover <jhover@bnl.gov>
             self.ic.requestPairing(self.options.requestpairing, code)
         
         if self.options.pairingcode:
-            self.pc = PairingClient(self.config)
             try:
-                (cert, key) = self.pc.getPairing(self.options.pairingcode)
+                (cert, key) = self.ic.getPairing(self.options.pairingcode)
                 print("%s" % cert)
                 print("")
                 print("%s")

@@ -90,6 +90,10 @@ class InfoHandler(object):
         d = self.persist.getdocument(key)
         self.log.debug("d is type %s" % type(d))
         return d
+    
+    def deletesubtree(self, key, path):
+        pass
+   
    
     def merge(self, source, destination):
         """
@@ -112,7 +116,19 @@ class InfoHandler(object):
             else:
                 destination[key] = value
         return destination
+
+    ##################################################################################
+    #   Pairing-related calls. 
+    ##################################################################################
     
+    def getpairing(self, key, pairingcode):
+        '''
+        Pull pairing document, check each entry to see if <entry>.pairingcode = pairingcode.
+        Only if so, prepare cert/key return, *delete entry*
+        '''
+        self.log.debug("Handling getpairing call...")
+
+
 
 class InfoRoot(object):
 
@@ -136,10 +152,14 @@ class InfoServiceAPI(object):
         self.infohandler = InfoHandler(config)
         self.log.debug("InfoServiceAPI init done." )
     
-    def GET(self, key):
-        d = self.infohandler.getdocument(key) 
-        self.log.debug("Document retrieved for key %s with val %s" % (key,d))
-        return d
+    def GET(self, key, pairingcode=None):
+        if pairingcode is None:
+            d = self.infohandler.getdocument(key) 
+            self.log.debug("Document retrieved for key %s with val %s" % (key,d))
+            return d
+        else:
+            d = self.infohandler.getpairing(key, pairingcode)
+            self.log.debug("Handling pairing retrieval")
 
     @cherrypy.tools.accept(media='text/plain')
     def PUT(self, key, data):
@@ -154,45 +174,17 @@ class InfoServiceAPI(object):
         self.log.debug("Document stored for key %s" % key)
         return "Document stored for key %s\n" % key
         
-    def DELETE(self):
-        pass
+    def DELETE(self, key, path):
+        '''
+        Unusual call that operates on node provided in path only. Path expressed as node 'name' attribute. 
+        /info/<key>/<name>/
+        Deletion only occurs if identity is allowed delete by ACL at <name>: { 'acl' :<acl> } 
+        '''
+        self.log.debug("Deleting subtree %s" % path)
+        self.infohandler.deletesubtree(key, path)
+        self.log.debug("Subtree deleted at %s/%s" % (key, path))
+        return "Subtree deleted at %s/%s" % (key, path)
 
-    def stripquotes(self,s):
-        rs = s.replace("'","")
-        return rs
-
-class PairingServiceAPI(object):
-    ''' 
-        Data at this level is assumed to be  JSON text/plain.
-    '''
-    exposed = True 
-    
-    def __init__(self, config):
-        self.log = logging.getLogger()
-        self.log.debug("Initting PairingServiceAPI...")
-        self.infohandler = InfoHandler(config)
-        self.log.debug("PairingServiceAPI init done." )
-    
-    def GET(self, key):
-        d = self.infohandler.getdocument(key) 
-        self.log.debug("Document retrieved for code %s with val %s" % (key,d))
-        return d
-
-    @cherrypy.tools.accept(media='text/plain')
-    def PUT(self, key, data):
-        self.log.debug("Storing document %s" % data)
-        self.infohandler.mergedocument(key, data)
-        self.log.debug("Document stored for key %s" % key)
-        return "Document stored for key %s\n" % key
-        
-    def POST(self, key, data):
-        self.log.debug("Storing document %s" % data)
-        self.infohandler.storedocument(key, data)
-        self.log.debug("Document stored for key %s" % key)
-        return "Document stored for key %s\n" % key
-        
-    def DELETE(self):
-        pass
 
     def stripquotes(self,s):
         rs = s.replace("'","")
@@ -227,10 +219,6 @@ class InfoService(object):
         {'request.dispatch': cherrypy.dispatch.MethodDispatcher()}
     })
         #cherrypy.tree.mount(InfoServiceAPI(self.config))
-        cherrypy.tree.mount(PairingServiceAPI(self.config),'/pairing',
-                                {'/':
-        {'request.dispatch': cherrypy.dispatch.MethodDispatcher()}
-    })
         
         
         cherrypy.server.unsubscribe()
