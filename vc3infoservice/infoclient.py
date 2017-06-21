@@ -218,21 +218,22 @@ class InfoClient(object):
             :return
             :rtype (str, str)         Cert and key
         '''
-        u = "https://%s:%s/info?key=%s&pairingcode=%s" % (self.infohost, 
+        u = "https://%s:%s/info?key=pairing&pairingcode=%s" % (self.infohost, 
                             self.httpsport,
-                            key,
                             pairingcode
                             )
         self.log.debug("Attempting to get pairing via URL %s" % u)
         try:
             #r = requests.get(u, verify=self.chainfile, cert=(self.certfile, self.keyfile))
             r = requests.get(u, verify=self.chainfile)
-            out = self.stripquotes(r.text)
-            parsed = json.loads(out)
-            pretty = json.dumps(parsed, indent=4, sort_keys=True)
+            
+            print("Request output is %s" % r.text)
+            
+            #parsed = json.loads(out)
+            #pretty = json.dumps(parsed, indent=4, sort_keys=True)
             #self.log.debug(pretty)
             #self.log.debug(r.status_code)
-            return r.text
+            #return r.text
         
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)
@@ -258,9 +259,10 @@ class Pairing(InfoEntity):
                       'cn',   # common name for pair.  
                       'pairingcode',
                       'cert',
-                      'key'
+                      'key',
+                      'encoding'
                      ]
-    def __init__(self, name, state, acl, cn, pairingcode, cert=None, key=None):
+    def __init__(self, name, state, acl, cn, pairingcode, cert=None, key=None, encoding='base64'):
         self.name = name
         self.log = logging.getLogger()
         self.state = state
@@ -269,6 +271,7 @@ class Pairing(InfoEntity):
         self.pairingcode = pairingcode
         self.cert = cert
         self.key = key
+        self.encoding = encoding
         
 
 class InfoClientCLI(object):
@@ -454,11 +457,14 @@ John Hover <jhover@bnl.gov>
         
         if self.options.pairingcode:
             try:
-                (cert, key) = self.ic.getPairing(self.options.pairingcode)
-                print("%s" % cert)
-                print("")
-                print("%s")
+                out = self.ic.getPairing(self.options.pairingcode)
+                print("out is %s" % out)
+                #(cert, key) = self.ic.getPairing(self.options.pairingcode)
+                #print("%s" % cert)
+                #print("")
+                #print("%s")
             except Exception, e:
+                self.log.error("Exception %s" % e)
                 print("No response. Invalid pairing or not setup yet. Try in 30 seconds.")
 
     def testquery(self):

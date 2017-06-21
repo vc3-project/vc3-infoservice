@@ -124,9 +124,25 @@ class InfoHandler(object):
     def getpairing(self, key, pairingcode):
         '''
         Pull pairing document, check each entry to see if <entry>.pairingcode = pairingcode.
-        Only if so, prepare cert/key return, *delete entry*
+        If so, and cert and key are not none, prepare to return them, delete entry, return Pairing
         '''
+        #        '''
+        #Gets JSON representation of document. 
+        #'''
+        #pd = self._getpythondocument(key)
+        #jd = json.dumps(pd)
+        #self.log.debug("d is type %s" % type(jd))
+        #return jd
+        
+        
         self.log.debug("Handling getpairing call...")
+        d = self.persist.getdocument(key)
+        
+        
+        self.log.debug("d is type %s" % type(d))
+        return d
+
+
 
 
 
@@ -158,8 +174,9 @@ class InfoServiceAPI(object):
             self.log.debug("Document retrieved for key %s with val %s" % (key,d))
             return d
         else:
-            d = self.infohandler.getpairing(key, pairingcode)
             self.log.debug("Handling pairing retrieval")
+            d = self.infohandler.getpairing(key, pairingcode)
+            return d
 
     @cherrypy.tools.accept(media='text/plain')
     def PUT(self, key, data):
