@@ -88,8 +88,13 @@ class InfoHandler(object):
         Gets Python object. 
         '''
         d = self.persist.getdocument(key)
-        self.log.debug("d is type %s" % type(d))
+        self.log.debug("d is type %s with value %s" % (type(d), d))
         return d
+    
+    def _storepythondocument(self, key, pd):
+        self.log.debug("Storing document for key %s" % key)
+        self.persist.storedocument(key, pd)
+    
     
     def deletesubtree(self, key, path):
         pass
@@ -126,25 +131,55 @@ class InfoHandler(object):
         Pull pairing document, check each entry to see if <entry>.pairingcode = pairingcode.
         If so, and cert and key are not none, prepare to return them, delete entry, return Pairing
         '''
-        #        '''
-        #Gets JSON representation of document. 
-        #'''
-        #pd = self._getpythondocument(key)
-        #jd = json.dumps(pd)
-        #self.log.debug("d is type %s" % type(jd))
-        #return jd
-        
-        
+        prd = None
+        pd = self._getpythondocument(key)
+        self.log.debug("Received dict: %s" % pd)
+        self.log.debug("Entries are %s" % pd[key] )
+        for p in pd[key].keys():
+            self.log.debug("Checking entry %s for pairingcode..." % p)
+            if pd[key][p]['pairingcode'] == pairingcode:
+                self.log.debug("Found matching entry %s value %s" % (p, pd[key][p]))
+                prd = json.dumps(pd[key][p])
+                try:
+                    self.log.debug("Attempting to delete entry %s from pairing." % p)
+                    pd[key].pop(p, None)
+                    self.log.debug("Deleted entry %s from pairing. Re-storing.." % p)
+                except KeyError:
+                    self.log.warning("Failed to delete entry %s from pairing." % p)
+                self._storepythondocument(key, pd)
+        self.log.debug("Returning pairing entry JSON %s" % prd)
+        return prd
+    
+    
+    def __getpairing(self, key, pairingcode):
+        '''
+        Pull pairing document, check each entry to see if <entry>.pairingcode = pairingcode.
+        If so, and cert and key are not none, prepare to return them, delete entry, return Pairing
+        '''
         self.log.debug("Handling getpairing call...")
-        d = self.persist.getdocument(key)
+        '''
+        {u'pairing': {u'jhover4': {u'cn': u'jhover4', u'pairingcode': 'jhover4-JPVMCP', u'cert': u'LS0tLS1C' }}}
+        {"pairing" : { "jhover4": { "cn": "jhover4",  "pairingcode" : "jhover4-JPVMCP" , "cert": "LS0tLS1C" }}}
         
-        
-        self.log.debug("d is type %s" % type(d))
-        return d
-
-
-
-
+        '''
+        pd = self.persist.getdocument(key)
+        self.log.debug("Got %s from persistence for key %s." % (pd, key))
+        for p in pd[key].keys():
+            self.log.debug("Checking entry %s for pairingcode..." % p)
+            if pd[key][p]['pairingcode'] == pairingcode:
+                self.log.debug("Found entry %s with matching pairingcode" % p)
+                prd = json.dumps(pd[key][p])
+                try:
+                    del pd[key][p]
+                    self.log.debug("Deleted entry %s from pairing. Re-storing.." % p)
+                except KeyError:
+                    pass
+        nd = json.dumps(pd)
+        self.log.debug("Storing new document: %s" % nd)          
+        self.persist.storedocument(key, nd)
+        self.log.debug("returning pairing entry JSON: %s" % prd)
+        return prd
+    
 
 class InfoRoot(object):
 
@@ -176,6 +211,7 @@ class InfoServiceAPI(object):
         else:
             self.log.debug("Handling pairing retrieval")
             d = self.infohandler.getpairing(key, pairingcode)
+            self.log.debug("Pairing retrieved for code %s with val %s" % (pairingcode,d))
             return d
 
     @cherrypy.tools.accept(media='text/plain')

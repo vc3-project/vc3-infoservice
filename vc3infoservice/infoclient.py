@@ -212,7 +212,7 @@ class InfoClient(object):
 
     def getPairing(self, pairingcode):
         '''
-            Special call because it provided pairing code as data, along with URL
+            Special call because it sends pairing code as data, along with URL
         
             :param str pairingcode    Code to be paired with. 
             :return
@@ -225,21 +225,18 @@ class InfoClient(object):
         self.log.debug("Attempting to get pairing via URL %s" % u)
         try:
             #r = requests.get(u, verify=self.chainfile, cert=(self.certfile, self.keyfile))
-            r = requests.get(u, verify=self.chainfile)
-            
+            r = requests.get(u, verify=self.chainfile)     
             print("Request output is %s" % r.text)
-            
-            #parsed = json.loads(out)
-            #pretty = json.dumps(parsed, indent=4, sort_keys=True)
-            #self.log.debug(pretty)
-            #self.log.debug(r.status_code)
-            #return r.text
-        
+            pe = json.loads(r.text)
+            ecert = pe['cert']
+            ekey = pe['key']
+            cert = self.decode(ecert)
+            key = self.decode(ekey)
+            return (cert, key)
+       
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)
-
-
-
+            return (None, None)
             
     def generateCode(self, name ):       
         cs= ''.join(choice(ascii_uppercase) for i in range(6))
@@ -457,12 +454,12 @@ John Hover <jhover@bnl.gov>
         
         if self.options.pairingcode:
             try:
-                out = self.ic.getPairing(self.options.pairingcode)
-                print("out is %s" % out)
-                #(cert, key) = self.ic.getPairing(self.options.pairingcode)
-                #print("%s" % cert)
-                #print("")
-                #print("%s")
+                #out = self.ic.getPairing(self.options.pairingcode)
+                #print("out is %s" % out)
+                (cert, key) = self.ic.getPairing(self.options.pairingcode)
+                print("%s" % cert)
+                print("")
+                print("%s" % key)
             except Exception, e:
                 self.log.error("Exception %s" % e)
                 print("No response. Invalid pairing or not setup yet. Try in 30 seconds.")
