@@ -226,7 +226,7 @@ class InfoClient(object):
         try:
             #r = requests.get(u, verify=self.chainfile, cert=(self.certfile, self.keyfile))
             r = requests.get(u, verify=self.chainfile)     
-            print("Request output is %s" % r.text)
+            #print("Request output is %s" % r.text)
             pe = json.loads(r.text)
             ecert = pe['cert']
             ekey = pe['key']
