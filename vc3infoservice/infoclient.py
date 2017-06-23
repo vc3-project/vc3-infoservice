@@ -49,6 +49,19 @@ TESTDOC='''{
                 }
            }'''
 
+class InfoConnectionFailure(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)   
+
+class InfoMissingPairingException(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)  
+
+
 class InfoClient(object):
     
     def __init__(self, config):
@@ -193,8 +206,13 @@ class InfoClient(object):
     def decode(self, string):
         return base64.b64decode(string)
 
-    def requestPairing(self, cnsubject, pairingcode):
-        self.log.debug("Infoclient requestPairing(%s , %s " % (cnsubject, pairingcode))
+    def requestPairing(self, cnsubject):
+        '''
+        Establish a pairing entry
+        '''
+        self.log.debug("Infoclient requestPairing for %s " % cnsubject)
+        pairingcode = self.generateCode(cnsubject)
+        self.log.debug("Generated code: %s " % pairingcode)
         po = Pairing(name=cnsubject, 
                      state='new', 
                      acl=None, 
@@ -204,11 +222,7 @@ class InfoClient(object):
         self.log.debug("Made pairing request: %s" % po)
         po.store(self)
         self.log.debug("Stored in /info/pairing..")
-
-
-    '''
-    
-    '''
+        return pairingcode
 
     def getPairing(self, pairingcode):
         '''
@@ -224,9 +238,7 @@ class InfoClient(object):
                             )
         self.log.debug("Attempting to get pairing via URL %s" % u)
         try:
-            #r = requests.get(u, verify=self.chainfile, cert=(self.certfile, self.keyfile))
             r = requests.get(u, verify=self.chainfile)     
-            #print("Request output is %s" % r.text)
             pe = json.loads(r.text)
             ecert = pe['cert']
             ekey = pe['key']
@@ -236,7 +248,12 @@ class InfoClient(object):
        
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)
-            return (None, None)
+            raise InfoConnectionFailure("Connection Error.")
+        
+        except Exception, e:
+            self.log.debug('Other failure. Probably missing pairing. %s ' % e)
+            raise InfoMissingPairingException("Missing pairing.")
+            
             
     def generateCode(self, name ):       
         cs= ''.join(choice(ascii_uppercase) for i in range(6))
@@ -448,9 +465,8 @@ John Hover <jhover@bnl.gov>
             
         if self.options.requestpairing:
             self.log.debug("Setting up pairing for CN: %s"% self.options.requestpairing )
-            code = self.ic.generateCode(self.options.requestpairing)
-            self.log.debug("Generated code: %s " % code)
-            self.ic.requestPairing(self.options.requestpairing, code)
+            code = self.ic.requestPairing(self.options.requestpairing)
+            print("%s" % code)
         
         if self.options.pairingcode:
             try:
