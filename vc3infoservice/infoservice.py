@@ -141,14 +141,17 @@ class InfoHandler(object):
                 self.log.debug("Checking entry %s for pairingcode..." % p)
                 if pd[key][p]['pairingcode'] == pairingcode:
                     self.log.debug("Found matching entry %s value %s" % (p, pd[key][p]))
-                    prd = json.dumps(pd[key][p])
-                    try:
-                        self.log.debug("Attempting to delete entry %s from pairing." % p)
-                        pd[key].pop(p, None)
-                        self.log.debug("Deleted entry %s from pairing. Re-storing.." % p)
-                    except KeyError:
-                        self.log.warning("Failed to delete entry %s from pairing." % p)
-                    self._storepythondocument(key, pd)
+                    if pd[key][p]['cert'] is not None:
+                        prd = json.dumps(pd[key][p])
+                        try:
+                            self.log.debug("Attempting to delete entry %s from pairing." % p)
+                            pd[key].pop(p, None)
+                            self.log.debug("Deleted entry %s from pairing. Re-storing.." % p)
+                        except KeyError:
+                            self.log.warning("Failed to delete entry %s from pairing." % p)
+                        self._storepythondocument(key, pd)
+                    else:
+                        self.log.info("Certificate for requested pairing not generated yet.")
             self.log.debug("Returning pairing entry JSON %s" % prd)
             if prd is None:
                 cherrypy.response.headers["Status"] = "404"
