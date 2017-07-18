@@ -180,12 +180,30 @@ class InfoClient(object):
     def getsubtree(self, path):
         pass
     
-    
-    
-    def deletedocument(self, key):
-        pass
-    
-    
+    def deletesubtree(self, path):
+        '''
+        Delete the leaf given by path.
+        
+        '''
+
+        try:
+            keys = path.split('.')
+            key  = keys[0]
+        
+            u = "https://%s:%s/info?key=%s" % (self.infohost, 
+                                self.httpsport,
+                                key
+                                )
+            self.log.debug("Trying to delete document at %s" % (path,))
+
+            r = requests.delete(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'name' : path})
+            self.log.debug(r.status_code)
+        
+        except IndexError, e:
+            self.log.error('Path should contain at least one key')
+            raise e
+        except requests.exceptions.ConnectionError, ce:
+            self.log.error('Connection failure. %s' % ce)
         
     def testquery(self):
         self.log.info("Testing storedocument. Doc = %s" % TESTDOC)
@@ -363,6 +381,10 @@ John Hover <jhover@bnl.gov>
                           action="store", 
                           metavar="[resource|account|cluster|...]", 
                           help="Get info from store with provided key.")        
+        parser.add_option("--deletesubtree", dest="deletesubtree", 
+                          action="store", 
+                          metavar="[resource|account|cluster|...]", 
+                          help="Delete the leaf given by keys path. Path given in the form of a.b.c.d... ")        
 
         parser.add_option("--requestpairing",
                           dest = "requestpairing",
@@ -461,6 +483,12 @@ John Hover <jhover@bnl.gov>
             qkey = self.options.getkey.lower().strip()
             self.log.debug("Getkey is %s, doing query" % qkey )
             out = self.ic.getdocument(qkey)
+            print(out)
+
+        if self.options.deletesubtree:
+            dpath = self.options.deletesubtree.lower().strip()
+            self.log.debug("Deletesubtree is %s, doing query" % dpath )
+            out = self.ic.deletesubtree(dpath)
             print(out)
             
         if self.options.requestpairing:

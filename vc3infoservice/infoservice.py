@@ -96,10 +96,13 @@ class InfoHandler(object):
         self.persist.storedocument(key, pd)
     
     
-    def deletesubtree(self, key, path):
-        pass
-   
-   
+    def deletesubtree(self, path):
+        lst = path.split('.')
+        try:
+            self.persist.deletesubtree(lst)
+        except IndexError:
+            raise Exception('path should have more than one key')
+
     def merge(self, source, destination):
         """
         merges nested python dictionaries.
@@ -209,16 +212,17 @@ class InfoServiceAPI(object):
         self.log.debug("Document stored for key %s" % key)
         return "Document stored for key %s\n" % key
         
-    def DELETE(self, key, path):
+    def DELETE(self, key, name):
         '''
         Unusual call that operates on node provided in path only. Path expressed as node 'name' attribute. 
         /info/<key>/<name>/
         Deletion only occurs if identity is allowed delete by ACL at <name>: { 'acl' :<acl> } 
         '''
-        self.log.debug("Deleting subtree %s" % path)
-        self.infohandler.deletesubtree(key, path)
-        self.log.debug("Subtree deleted at %s/%s" % (key, path))
-        return "Subtree deleted at %s/%s" % (key, path)
+
+        self.log.debug("Deleting subtree %s" % name)
+        self.infohandler.deletesubtree(name)
+        self.log.debug("Subtree deleted at %s" % name)
+        return "Subtree deleted at %s" % name
 
 
     def stripquotes(self,s):
