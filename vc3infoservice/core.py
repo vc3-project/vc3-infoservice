@@ -50,10 +50,11 @@ class InfoEntity(object):
         '''
         keystr = self.__class__.infokey
         validvalues = self.__class__.validvalues
-        for k in validvalues.keys():
-            attrval = getattr(self, k) 
-            if attrval not in validvalues:
-                self.log.warning("Info Entity has invalid value (%s) for attribute %s " (attrval, k) )
+        for keyattr in validvalues.keys():
+            validlist = validvalues[keyattr]
+            attrval = getattr(self, keyattr) 
+            if attrval not in validlist:
+                self.log.warning("Info Entity has invalid value '%s' for attribute '%s' " % (attrval, keyattr) )
         #resources = infoclient.getdocumentobject(key=keystr)
         da = self.makeDictObject()
         self.log.debug("Dict obj: %s" % da)
