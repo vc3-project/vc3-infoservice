@@ -19,6 +19,7 @@ class InfoEntity(object):
     '''
     infokey = 'unset'
     infoattributes = []
+    validvalues = {}
         
     def __repr__(self):
         s = "%s(" % self.__class__.__name__
@@ -43,12 +44,6 @@ class InfoEntity(object):
         self.log.debug("%s object name=%s %s ->%s" % (self.__class__.__name__, self.name, self.state, newstate) )
         self.state = newstate
     
-    def addAcl(self, aclstring):
-        pass    
-
-    def removeAcl(self, aclstring):
-        pass
-
     def store(self, infoclient):
         '''
         Stores this Infoentity in the provided infoclient info tree. 
@@ -64,6 +59,12 @@ class InfoEntity(object):
         self.log.debug("Dict obj: %s" % da)
         infoclient.storedocumentobject(da, key=keystr)
 
+    def addAcl(self, aclstring):
+        pass    
+
+    def removeAcl(self, aclstring):
+        pass
+
     @classmethod
     def objectFromDict(cls, dict):
         '''
@@ -76,10 +77,13 @@ class InfoEntity(object):
             }
         }
         '''
+        log = logging.getLogger()
+        log.debug("Making object from dictionary...")
         name = dict.keys()[0]
         d = dict[name]
         args = {}
         for key in cls.infoattributes:
             args[key] = d[key]
         eo = cls(**args)
+        log.debug("Successfully made object from dictionary, returning...")
         return eo
