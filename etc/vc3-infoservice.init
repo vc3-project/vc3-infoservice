@@ -122,8 +122,8 @@ create_var_run(){
 create_var_log(){
     # function to create directory  $HEAD/var/log/$SERVICENAME 
     # if it does not exist. 
-    if [ ! -d $HEAD/var/log/vc3 ]; then
-        mkdir -p $HEAD/var/log/vc3
+    if [ ! -d $HEAD/var/log/$SERVICENAME ]; then
+        mkdir -p $HEAD/var/log/$SERVICENAME
     fi
 }
 
