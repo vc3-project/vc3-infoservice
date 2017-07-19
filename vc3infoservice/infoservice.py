@@ -53,7 +53,7 @@ class InfoHandler(object):
         psect = "plugin-%s" % pluginname.lower()
         self.log.debug("Creating persistence plugin...")
         self.persist = pm.getplugin(parent=self, 
-                                    paths=['vc3', 'plugins', 'persist'], 
+                                    paths=['vc3infoservice', 'plugins', 'persist'], 
                                     name=pluginname, 
                                     config=self.config, 
                                     section=psect)
@@ -88,9 +88,21 @@ class InfoHandler(object):
         Gets Python object. 
         '''
         d = self.persist.getdocument(key)
-        self.log.debug("d is type %s" % type(d))
+        self.log.debug("d is type %s with value %s" % (type(d), d))
         return d
-   
+    
+    def _storepythondocument(self, key, pd):
+        self.log.debug("Storing document for key %s" % key)
+        self.persist.storedocument(key, pd)
+    
+    
+    def deletesubtree(self, path):
+        lst = path.split('.')
+        try:
+            self.persist.deletesubtree(lst)
+        except IndexError:
+            raise Exception('path should have more than one key')
+
     def merge(self, source, destination):
         """
         merges nested python dictionaries.
@@ -112,9 +124,47 @@ class InfoHandler(object):
             else:
                 destination[key] = value
         return destination
+
+    ##################################################################################
+    #   Pairing-related calls. 
+    ##################################################################################
     
-    
-    
+    def getpairing(self, key, pairingcode):
+        '''
+        Pull pairing document, check each entry to see if <entry>.pairingcode = pairingcode.
+        If so, and cert and key are not none, prepare to return them, delete entry, return Pairing
+        '''
+        failmsg="Invalid pairing code or not satisfied yet. Try in 30 seconds."
+        prd = None
+        pd = self._getpythondocument(key)
+        self.log.debug("Received dict: %s" % pd)
+        try:        
+            self.log.debug("Entries are %s" % pd[key] )
+            for p in pd[key].keys():
+                self.log.debug("Checking entry %s for pairingcode..." % p)
+                if pd[key][p]['pairingcode'] == pairingcode:
+                    self.log.debug("Found matching entry %s value %s" % (p, pd[key][p]))
+                    if pd[key][p]['cert'] is not None:
+                        prd = json.dumps(pd[key][p])
+                        try:
+                            self.log.debug("Attempting to delete entry %s from pairing." % p)
+                            pd[key].pop(p, None)
+                            self.log.debug("Deleted entry %s from pairing. Re-storing.." % p)
+                        except KeyError:
+                            self.log.warning("Failed to delete entry %s from pairing." % p)
+                        self._storepythondocument(key, pd)
+                    else:
+                        self.log.info("Certificate for requested pairing not generated yet.")
+            self.log.debug("Returning pairing entry JSON %s" % prd)
+            if prd is None:
+                cherrypy.response.headers["Status"] = "404"
+                return failmsg
+            return prd
+        except KeyError:
+            cherrypy.response.headers["Status"] = "404"
+            return failmsg
+   
+   
 
 class InfoRoot(object):
 
@@ -127,7 +177,9 @@ class InfoRoot(object):
         return ''.join(random.sample(string.hexdigits, int(length)))
 
 class InfoServiceAPI(object):
-    "Data at this level is assumed to be  JSON text/plain"
+    ''' 
+        Data at this level is assumed to be  JSON text/plain.
+    '''
     exposed = True 
     
     def __init__(self, config):
@@ -136,10 +188,16 @@ class InfoServiceAPI(object):
         self.infohandler = InfoHandler(config)
         self.log.debug("InfoServiceAPI init done." )
     
-    def GET(self, key):
-        d = self.infohandler.getdocument(key) 
-        self.log.debug("Document retrieved for key %s with val %s" % (key,d))
-        return d
+    def GET(self, key, pairingcode=None):
+        if pairingcode is None:
+            d = self.infohandler.getdocument(key) 
+            self.log.debug("Document retrieved for key %s with val %s" % (key,d))
+            return d
+        else:
+            self.log.debug("Handling pairing retrieval")
+            d = self.infohandler.getpairing(key, pairingcode)
+            self.log.debug("Pairing retrieved for code %s with val %s" % (pairingcode,d))
+            return d
 
     @cherrypy.tools.accept(media='text/plain')
     def PUT(self, key, data):
@@ -154,12 +212,23 @@ class InfoServiceAPI(object):
         self.log.debug("Document stored for key %s" % key)
         return "Document stored for key %s\n" % key
         
-    def DELETE(self):
-        pass
+    def DELETE(self, key, name):
+        '''
+        Unusual call that operates on node provided in path only. Path expressed as node 'name' attribute. 
+        /info/<key>/<name>/
+        Deletion only occurs if identity is allowed delete by ACL at <name>: { 'acl' :<acl> } 
+        '''
+
+        self.log.debug("Deleting subtree %s" % name)
+        self.infohandler.deletesubtree(name)
+        self.log.debug("Subtree deleted at %s" % name)
+        return "Subtree deleted at %s" % name
+
 
     def stripquotes(self,s):
         rs = s.replace("'","")
         return rs
+
 
 class InfoService(object):
     
@@ -189,6 +258,8 @@ class InfoService(object):
         {'request.dispatch': cherrypy.dispatch.MethodDispatcher()}
     })
         #cherrypy.tree.mount(InfoServiceAPI(self.config))
+        
+        
         cherrypy.server.unsubscribe()
     
         server1 = cherrypy._cpserver.Server()

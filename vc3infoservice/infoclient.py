@@ -20,24 +20,50 @@ import sys
 import time
 import traceback
 
+from random import choice
+from string import ascii_uppercase
 from optparse import OptionParser
 from ConfigParser import ConfigParser
 
+
 import requests
 requests.packages.urllib3.disable_warnings()
-logging.captureWarnings(True)
+try:
+    logging.captureWarnings(True)
+except AttributeError:
+    # Some versions don't have this. 
+    pass
 
+from vc3infoservice.core import InfoEntity
 
 TESTKEY='testkey'
-TESTDOC='''{"uchicago_rcc" : {
-            "base" : {
-                "distribution" : "redhat",
-                "release" : "6.7",
-                "architecture" : "x86_64"}
+TESTDOC='''{ 
+                {"jhoverproject": 
+                    { "blueprints": null, 
+                      "name": "jhoverproject", 
+                      "acl": null, 
+                      "members": ["jhover", "angus"], 
+                      "state": "new", 
+                      "allocations": null, 
+                      "owner": "jhover"}
                 }
-            }'''
+           }'''
+
+class InfoConnectionFailure(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)   
+
+class InfoMissingPairingException(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)  
+
 
 class InfoClient(object):
+    
     def __init__(self, config):
         self.log = logging.getLogger()
         self.log.debug('InfoClient class init...')
@@ -149,11 +175,35 @@ class InfoClient(object):
                 ds = ds[k]
             else:
                 raise Exception('Successful keys: ' + str(good_keys))
-
         return ds
     
-    def deletedocument(self, key):
+    def getsubtree(self, path):
         pass
+    
+    def deletesubtree(self, path):
+        '''
+        Delete the leaf given by path.
+        
+        '''
+
+        try:
+            keys = path.split('.')
+            key  = keys[0]
+        
+            u = "https://%s:%s/info?key=%s" % (self.infohost, 
+                                self.httpsport,
+                                key
+                                )
+            self.log.debug("Trying to delete document at %s" % (path,))
+
+            r = requests.delete(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'name' : path})
+            self.log.debug(r.status_code)
+        
+        except IndexError, e:
+            self.log.error('Path should contain at least one key')
+            raise e
+        except requests.exceptions.ConnectionError, ce:
+            self.log.error('Connection failure. %s' % ce)
         
     def testquery(self):
         self.log.info("Testing storedocument. Doc = %s" % TESTDOC)
@@ -174,7 +224,87 @@ class InfoClient(object):
     def decode(self, string):
         return base64.b64decode(string)
 
+    def requestPairing(self, cnsubject):
+        '''
+        Establish a pairing entry
+        '''
+        self.log.debug("Infoclient requestPairing for %s " % cnsubject)
+        pairingcode = self.generateCode(cnsubject)
+        self.log.debug("Generated code: %s " % pairingcode)
+        po = Pairing(name=cnsubject, 
+                     state='new', 
+                     acl=None, 
+                     cn=cnsubject, 
+                     pairingcode=pairingcode
+                     )
+        self.log.debug("Made pairing request: %s" % po)
+        po.store(self)
+        self.log.debug("Stored in /info/pairing..")
+        return pairingcode
 
+    def getPairing(self, pairingcode):
+        '''
+            Special call because it sends pairing code as data, along with URL
+        
+            :param str pairingcode    Code to be paired with. 
+            :return
+            :rtype (str, str)         Cert and key
+        '''
+        u = "https://%s:%s/info?key=pairing&pairingcode=%s" % (self.infohost, 
+                            self.httpsport,
+                            pairingcode
+                            )
+        self.log.debug("Attempting to get pairing via URL %s" % u)
+        try:
+            r = requests.get(u, verify=self.chainfile)     
+            pe = json.loads(r.text)
+            ecert = pe['cert']
+            ekey = pe['key']
+            cert = self.decode(ecert)
+            key = self.decode(ekey)
+            return (cert, key)
+       
+        except requests.exceptions.ConnectionError, ce:
+            self.log.error('Connection failure. %s' % ce)
+            raise InfoConnectionFailure("Connection Error.")
+        
+        except Exception, e:
+            self.log.debug('Other failure. Probably missing pairing. %s ' % e)
+            raise InfoMissingPairingException("Missing pairing.")
+            
+            
+    def generateCode(self, name ):       
+        cs= ''.join(choice(ascii_uppercase) for i in range(6))
+        return("%s-%s" % (name, cs))
+      
+
+class Pairing(InfoEntity):
+    '''
+    Represents a request and completed entry for a pairing.
+    Stored in /pairing/<code>
+    
+    '''    
+    infokey = 'pairing'
+    infoattributes = ['name', 
+                      'state',
+                      'acl',
+                      'cn',   # common name for pair.  
+                      'pairingcode',
+                      'cert',
+                      'key',
+                      'encoding'
+                     ]
+    def __init__(self, name, state, acl, cn, pairingcode, cert=None, key=None, encoding='base64'):
+        self.name = name
+        self.log = logging.getLogger()
+        self.state = state
+        self.acl = acl
+        self.cn = cn
+        self.pairingcode = pairingcode
+        self.cert = cert
+        self.key = key
+        self.encoding = encoding
+        
 
 class InfoClientCLI(object):
     """class to handle the command line invocation of APF. 
@@ -251,8 +381,25 @@ John Hover <jhover@bnl.gov>
                           action="store", 
                           metavar="[resource|account|cluster|...]", 
                           help="Get info from store with provided key.")        
+        parser.add_option("--deletesubtree", dest="deletesubtree", 
+                          action="store", 
+                          metavar="[resource|account|cluster|...]", 
+                          help="Delete the leaf given by keys path. Path given in the form of a.b.c.d... ")        
 
-
+        parser.add_option("--requestpairing",
+                          dest = "requestpairing",
+                          action="store",
+                          metavar="SUBJECT/CN",
+                          help="Request a cert/key creation for supplied HOST/CN/SUBJECT"
+                          )
+        
+        parser.add_option("--getpairing",
+                          dest = "pairingcode",
+                          action = "store",
+                          metavar="PAIRINGCODE",
+                          help="Retrieve cert/key pair for supplied pairing code."
+                          )
+                        
         (self.options, self.args) = parser.parse_args()
         self.options.confFiles = self.options.confFiles.split(',')
 
@@ -338,6 +485,29 @@ John Hover <jhover@bnl.gov>
             out = self.ic.getdocument(qkey)
             print(out)
 
+        if self.options.deletesubtree:
+            dpath = self.options.deletesubtree.lower().strip()
+            self.log.debug("Deletesubtree is %s, doing query" % dpath )
+            out = self.ic.deletesubtree(dpath)
+            print(out)
+            
+        if self.options.requestpairing:
+            self.log.debug("Setting up pairing for CN: %s"% self.options.requestpairing )
+            code = self.ic.requestPairing(self.options.requestpairing)
+            print("%s" % code)
+        
+        if self.options.pairingcode:
+            try:
+                #out = self.ic.getPairing(self.options.pairingcode)
+                #print("out is %s" % out)
+                (cert, key) = self.ic.getPairing(self.options.pairingcode)
+                print("%s" % cert)
+                print("")
+                print("%s" % key)
+            except Exception, e:
+                self.log.error("Exception %s" % e)
+                print("No response. Invalid pairing or not setup yet. Try in 30 seconds.")
+
     def testquery(self):
         self.ic = InfoClient(self.config)
         self.ic.testquery()
@@ -345,7 +515,7 @@ John Hover <jhover@bnl.gov>
 
     def run(self):
         self.doquery()
-        #self.testquery()
+
 
 if __name__ == '__main__':
     logging.info("Running from .py file...")
