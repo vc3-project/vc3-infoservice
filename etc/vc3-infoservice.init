@@ -80,7 +80,7 @@ fi
 
 # Sensible defaults
 #CONFFILE=$ETCDIR/$SERVICENAME.conf
-CONFFILE=/etc/vc3/vc3-info-service.conf
+CONFFILE=/etc/vc3/vc3-infoservice.conf
 LOGFILE=/var/log/$SERVICENAME/$SERVICENAME.log
 CONSOLE_LOG=/var/log/$SERVICENAME/console.log
 OPTIONS="--debug --runas=vc3 --log=$LOGFILE"
