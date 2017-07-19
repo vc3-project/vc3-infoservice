@@ -54,6 +54,11 @@ class InfoEntity(object):
         Stores this Infoentity in the provided infoclient info tree. 
         '''
         keystr = self.__class__.infokey
+        validvalues = self.__class__.validvalues
+        for k in validvalues.keys():
+            attrval = getattr(self, k) 
+            if attrval not in validvalues:
+                self.log.warning("Info Entity has invalid value (%s) for attribute %s " (attrval, k) )
         #resources = infoclient.getdocumentobject(key=keystr)
         da = self.makeDictObject()
         self.log.debug("Dict obj: %s" % da)
