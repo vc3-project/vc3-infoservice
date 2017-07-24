@@ -69,9 +69,9 @@ class InfoClient(object):
         self.log.debug('InfoClient class init...')
         self.config = config
 
-        self.certfile  = None 
-        self.keyfile   = None 
-        self.chainfile = None 
+        self.certfile  = False
+        self.keyfile   = False
+        self.chainfile = False
         try:
             self.certfile  = os.path.expanduser(config.get('netcomm','certfile'))
             self.keyfile   = os.path.expanduser(config.get('netcomm', 'keyfile'))
@@ -81,7 +81,7 @@ class InfoClient(object):
 
         self.httpport  = int(config.get('netcomm','httpport'))
         self.httpsport = int(config.get('netcomm','httpsport'))
-        self.infohost  = os.path.expanduser(config.get('netcomm','infohost'))
+        self.infohost  = config.get('netcomm','infohost')
       
         self.log.debug("Client initialized.")
 
@@ -97,12 +97,7 @@ class InfoClient(object):
                             )
         self.log.debug("Trying to store document %s at %s" % (doc, u))
         try:
-            r = None
-            if self.certfile:
-                r = requests.put(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : doc})
-            else:
-                self.log.debug(u)
-                r = requests.put(u, verify=False, params={'data' : doc})
+            r = requests.ut(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : doc})
             self.log.debug(r.status_code)
         
         except requests.exceptions.ConnectionError, ce:
