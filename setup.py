@@ -49,25 +49,10 @@ home_data_files=[
                 ]
 
 def choose_data_files():
-    rpminstall = True
-    userinstall = False
-     
-    if 'bdist_rpm' in sys.argv:
-        rpminstall = True
-
-    elif 'install' in sys.argv:
-        for a in sys.argv:
-            if a.lower().startswith('--home'):
-                rpminstall = False
-                userinstall = True
-                
-    if rpminstall:
+    if 'rpm' in sys.argv:
         return rpm_data_files
-    elif userinstall:
-        return home_data_files
     else:
-        # Something probably went wrong, so punt
-        return rpm_data_files
+        return home_data_files
        
 # ===========================================================
 
