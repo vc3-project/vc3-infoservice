@@ -23,7 +23,7 @@ import traceback
 from random import choice
 from string import ascii_uppercase
 from optparse import OptionParser
-from ConfigParser import ConfigParser
+from ConfigParser import ConfigParser, NoOptionError
 
 
 import requests
@@ -68,12 +68,20 @@ class InfoClient(object):
         self.log = logging.getLogger()
         self.log.debug('InfoClient class init...')
         self.config = config
-        self.certfile = os.path.expanduser(config.get('netcomm','certfile'))
-        self.keyfile = os.path.expanduser(config.get('netcomm', 'keyfile'))
-        self.chainfile = os.path.expanduser(config.get('netcomm','chainfile'))
-        self.httpport = int(config.get('netcomm','httpport'))
+
+        self.certfile  = None 
+        self.keyfile   = None 
+        self.chainfile = None 
+        try:
+            self.certfile  = os.path.expanduser(config.get('netcomm','certfile'))
+            self.keyfile   = os.path.expanduser(config.get('netcomm', 'keyfile'))
+            self.chainfile = os.path.expanduser(config.get('netcomm','chainfile'))
+        except NoOptionError:
+            self.log.warning("No complete certificate information was found. Using anonymous certificates")
+
+        self.httpport  = int(config.get('netcomm','httpport'))
         self.httpsport = int(config.get('netcomm','httpsport'))
-        self.infohost = os.path.expanduser(config.get('netcomm','infohost'))
+        self.infohost  = os.path.expanduser(config.get('netcomm','infohost'))
       
         self.log.debug("Client initialized.")
 
@@ -89,7 +97,12 @@ class InfoClient(object):
                             )
         self.log.debug("Trying to store document %s at %s" % (doc, u))
         try:
-            r = requests.put(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : doc})
+            r = None
+            if self.certfile:
+                r = requests.put(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : doc})
+            else:
+                self.log.debug(u)
+                r = requests.put(u, verify=False, params={'data' : doc})
             self.log.debug(r.status_code)
         
         except requests.exceptions.ConnectionError, ce:
