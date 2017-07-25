@@ -77,7 +77,7 @@ class InfoClient(object):
             self.keyfile   = os.path.expanduser(config.get('netcomm', 'keyfile'))
             self.chainfile = os.path.expanduser(config.get('netcomm','chainfile'))
         except NoOptionError:
-            self.log.warning("No complete certificate information was found. Using anonymous certificates")
+            self.log.warning("No complete certificate information was found. Contacting infoservice with unverified certificates.")
 
         self.httpport  = int(config.get('netcomm','httpport'))
         self.httpsport = int(config.get('netcomm','httpsport'))
