@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 EnvironmentFile=-/etc/sysconfig/vc3-infoservice
-ExecStart=/usr/bin/vc3-info-service --conf $CONFFILE $OPTIONS
+ExecStart=/usr/bin/vc3-info-service --conf /etc/vc3/vc3-infoservice.conf $OPTIONS
 Restart=on-failure
 
 [Install]
