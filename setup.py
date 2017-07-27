@@ -73,5 +73,6 @@ setup(
     scripts=['scripts/vc3-info-service',
              'scripts/vc3-info-client',
              ],
-    data_files=choose_data_file_locations()
+    data_files=choose_data_file_locations(),
+    install_requires=['cherrypy','pyopenssl']
 )
