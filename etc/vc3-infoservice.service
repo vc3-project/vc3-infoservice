@@ -4,10 +4,9 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-EnvironmentFile=-/etc/sysconfig/vc3-info-service
-ExecStart=/usr/libexec/vc3-infoservice.init start
-ExecStop=/usr/libexec/vc3-infoservice.init stop
-ExecReload=/usr/libexec/vc3-infoservice.init restart
+EnvironmentFile=-/etc/sysconfig/vc3-infoservice
+ExecStart=/usr/bin/vc3-infoservice --conf $CONFFILE $OPTIONS
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
