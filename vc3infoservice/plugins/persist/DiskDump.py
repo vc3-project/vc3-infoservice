@@ -1,6 +1,8 @@
+import errno
+import json
 import logging
 import os
-import json
+import time
 
 class DiskDump(object):
     
@@ -58,9 +60,16 @@ class DiskDump(object):
             outfile.write(json.dumps(self.documents))
 
     def load_db(self):
-	try:
+        try:
             with open(self.dbname, 'r') as infile:
                 self.documents = json.load(infile)
-        except IOError:
-                pass
+        except IOError, e:
+            if e.errno == errno.ENOENT:
+                self.log.warn("Could not load db file %s" % self.dbname)
+            else:
+                raise e
+        except ValueError:
+            self.log.error("Could not load db file %s" % self.dbname)
+            os.rename(self.dbname, self.dbname + '.invalid.' + time.strftime('%Y%m%d.%H%M%S'))
+            os.remove(self.dbname)
 
