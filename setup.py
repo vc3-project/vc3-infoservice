@@ -74,5 +74,5 @@ setup(
              'scripts/vc3-info-client',
              ],
     data_files=choose_data_file_locations(),
-    install_requires=['cherrypy','pyopenssl']
+    install_requires=['cherrypy','pyopenssl','pluginmanager']
 )
