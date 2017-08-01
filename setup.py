@@ -4,9 +4,16 @@
 
 import sys
 
-try:
+def choose_data_file_locations():
+    if rpm_install:
+        return rpm_data_files
+    else:
+        return home_data_files
+
+rpm_install = 'bdist_rpm' in sys.argv
+if rpm_install:
     from setuptools import setup
-except ImportError:
+else:
     from distutils.core import setup
 
 from vc3infoservice import infoservice
@@ -34,17 +41,6 @@ home_data_files = [('etc', etc_files),
                    ('etc', initd_files),
                    ('etc', sysconfig_files), ]
 
-
-def choose_data_file_locations():
-    rpm_install = False
-
-    if 'bdist_rpm' in sys.argv:
-        rpm_install = True
-
-    if rpm_install:
-        return rpm_data_files
-    else:
-        return home_data_files
 
 # ===========================================================
 
