@@ -8,14 +8,14 @@ from vc3infoservice import infoservice
 from setuptools import setup
 
 
-def choose_data_file_locations(rpm_install):
+def choose_data_file_locations():
     local_install = False
 
-    if rpm_install:
-        local_install = False
-    elif '--user' in sys.argv:
+    if '--user' in sys.argv:
         local_install = True
     elif any( [ re.match('--home(=|\s)', arg) for arg in sys.argv] ):
+        local_install = True
+    elif any( [ re.match('--prefix(=|\s)', arg) for arg in sys.argv] ):
         local_install = True
 
     if local_install:
@@ -46,8 +46,7 @@ home_data_files = [('etc', etc_files),
                    ('etc', initd_files),
                    ('etc', sysconfig_files), ]
 
-rpm_install = 'bdist_rpm' in sys.argv
-data_files = choose_data_file_locations(rpm_install)
+data_files = choose_data_file_locations()
 
 # ===========================================================
 
