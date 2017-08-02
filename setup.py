@@ -11,12 +11,12 @@ def choose_data_file_locations():
         return home_data_files
 
 rpm_install = 'bdist_rpm' in sys.argv
-if rpm_install:
-    from setuptools import setup
-else:
-    from distutils.core import setup
 
+
+
+from distutils.core import setup
 from vc3infoservice import infoservice
+
 release_version = infoservice.__version__
 
 systemd_files = ['etc/vc3-infoservice.service']

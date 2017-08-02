@@ -189,6 +189,11 @@ class InfoServiceAPI(object):
         self.log.debug("InfoServiceAPI init done." )
     
     def GET(self, key, pairingcode=None):
+
+        self.log.info("CLIENT HEADERS")
+        self.log.info(str(cherrypy.request.headers))
+
+
         if pairingcode is None:
             d = self.infohandler.getdocument(key) 
             self.log.debug("Document retrieved for key %s with val %s" % (key,d))
