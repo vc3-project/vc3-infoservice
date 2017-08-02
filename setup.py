@@ -4,7 +4,7 @@
 
 import sys
 import re
-from vc3infoservice import infoservice
+import time
 from setuptools import setup
 
 
@@ -13,9 +13,9 @@ def choose_data_file_locations():
 
     if '--user' in sys.argv:
         local_install = True
-    elif any( [ re.match('--home(=|\s)', arg) for arg in sys.argv] ):
+    elif any([re.match('--home(=|\s)', arg) for arg in sys.argv]):
         local_install = True
-    elif any( [ re.match('--prefix(=|\s)', arg) for arg in sys.argv] ):
+    elif any([re.match('--prefix(=|\s)', arg) for arg in sys.argv]):
         local_install = True
 
     if local_install:
@@ -23,7 +23,8 @@ def choose_data_file_locations():
     else:
         return rpm_data_files
 
-release_version = infoservice.__version__
+current_time = time.gmtime()
+release_version = "{0}.{1:0>2}.{2:0>2}".format(current_time.tm_year, current_time.tm_mon, current_time.tm_day)
 
 systemd_files = ['etc/vc3-infoservice.service']
 
