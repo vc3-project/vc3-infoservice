@@ -52,7 +52,7 @@ data_files = choose_data_file_locations()
 # ===========================================================
 
 setup(
-    name="vc3-info-service",
+    name="vc3-infoservice",
     version=release_version,
     description='vc3-info-service package',
     long_description='''This package contains the VC3 Information Service''',
@@ -66,8 +66,8 @@ setup(
               'vc3infoservice.plugins',
               'vc3infoservice.plugins.persist'
               ],
-    scripts=['scripts/vc3-info-service',
-             'scripts/vc3-info-client',
+    scripts=['scripts/vc3-infoservice',
+             'scripts/vc3-infoclient',
              ],
     data_files=data_files,
     install_requires=['cherrypy','pyopenssl','pluginmanager']
