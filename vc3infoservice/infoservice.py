@@ -126,7 +126,7 @@ class InfoHandler(object):
         return destination
 
     ##################################################################################
-    #   Pairing-related calls. 
+    #   Infrastructural calls. 
     ##################################################################################
     
     def getpairing(self, key, pairingcode):
@@ -163,6 +163,12 @@ class InfoHandler(object):
         except KeyError:
             cherrypy.response.headers["Status"] = "404"
             return failmsg
+
+    def getCAChain(self):
+        '''
+        
+        '''
+        pass
    
    
 
@@ -178,7 +184,9 @@ class InfoRoot(object):
 
 class InfoServiceAPI(object):
     ''' 
-        Data at this level is assumed to be  JSON text/plain.
+        Data at this level is assumed to be  JSON text/plain. 
+       
+           
     '''
     exposed = True 
     
@@ -189,11 +197,8 @@ class InfoServiceAPI(object):
         self.log.debug("InfoServiceAPI init done." )
     
     def GET(self, key, pairingcode=None):
-
-        self.log.info("CLIENT HEADERS")
-        self.log.info(str(cherrypy.request.headers))
-
-
+        self.log.debug("Client wsgi_environ: %s" % str(cherrypy.request.wsgi_environ))
+        self.log.debug("Client headers: %s" % str(cherrypy.request.headers))
         if pairingcode is None:
             d = self.infohandler.getdocument(key) 
             self.log.debug("Document retrieved for key %s with val %s" % (key,d))
@@ -206,12 +211,14 @@ class InfoServiceAPI(object):
 
     @cherrypy.tools.accept(media='text/plain')
     def PUT(self, key, data):
+        self.log.debug("Client headers: %s" % str(cherrypy.request.headers))
         self.log.debug("Storing document %s" % data)
         self.infohandler.mergedocument(key, data)
         self.log.debug("Document stored for key %s" % key)
         return "Document stored for key %s\n" % key
         
     def POST(self, key, data):
+        self.log.debug("Client headers: %s" % str(cherrypy.request.headers))
         self.log.debug("Storing document %s" % data)
         self.infohandler.storedocument(key, data)
         self.log.debug("Document stored for key %s" % key)
@@ -223,7 +230,7 @@ class InfoServiceAPI(object):
         /info/<key>/<name>/
         Deletion only occurs if identity is allowed delete by ACL at <name>: { 'acl' :<acl> } 
         '''
-
+        self.log.debug("Client headers: %s" % str(cherrypy.request.headers))
         self.log.debug("Deleting subtree %s" % name)
         self.infohandler.deletesubtree(name)
         self.log.debug("Subtree deleted at %s" % name)
