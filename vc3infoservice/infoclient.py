@@ -19,6 +19,7 @@ import platform
 import sys
 import time
 import traceback
+import warnings
 
 from random import choice
 from string import ascii_uppercase
@@ -526,7 +527,12 @@ John Hover <jhover@bnl.gov>
 
 
 if __name__ == '__main__':
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+    
     logging.info("Running from .py file...")
+    
+    
     iccli = InfoClientCLI()
     iccli.run()
 
