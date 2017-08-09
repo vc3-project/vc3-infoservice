@@ -2,7 +2,18 @@
     missingok
     notifempty
     sharedscripts
-    delaycompress
+    size 100M
+    rotate 10
+    postrotate
+        /bin/systemctl reload vc3-infoservice.service > /dev/null 2>/dev/null || true
+    endscript
+}
+/var/log/vc3/vc3-infoservice-console.log {
+    missingok
+    notifempty
+    sharedscripts
+    size 50M
+    rotate 2
     postrotate
         /bin/systemctl reload vc3-infoservice.service > /dev/null 2>/dev/null || true
     endscript
