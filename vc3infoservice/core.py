@@ -25,7 +25,7 @@ class InfoEntity(object):
         s = "%s(" % self.__class__.__name__
         for a in self.__class__.infoattributes:
             val = getattr(self, a, None)
-            if val is not None:
+            if isinstance(val, str) or isinstance(val, unicode):
                 if len(val) > 80:
                     s+="%s=%s... " % (a, val[:25] )
                 else:
