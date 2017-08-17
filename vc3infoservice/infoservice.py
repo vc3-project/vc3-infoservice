@@ -154,7 +154,7 @@ class InfoHandler(object):
                                 dest.append(item)
                         #dest.extend(src)
                     else:
-                        self.log.debug("Refusing to add non-list %s to list %s" % (src, dest))
+                        self.log.error("Refusing to add non-list %s to list %s" % (src, dest))
                         # append to list
                         #dest.append(src)
                 elif isinstance(dest, dict):
