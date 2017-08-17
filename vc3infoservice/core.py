@@ -24,7 +24,14 @@ class InfoEntity(object):
     def __repr__(self):
         s = "%s(" % self.__class__.__name__
         for a in self.__class__.infoattributes:
-            s+="%s=%s " % (a, getattr(self, a, None)) 
+            val = getattr(self, a, None)
+            if val is not None:
+                if len(val) > 80:
+                    s+="%s=%s... " % (a, val[:25] )
+                else:
+                    s+="%s=%s " % (a, val )
+            else:
+                s+="%s=%s " % (a, val )
         s += ")"
         return s    
 
