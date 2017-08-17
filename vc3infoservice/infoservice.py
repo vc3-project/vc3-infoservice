@@ -127,7 +127,7 @@ class InfoHandler(object):
                 destination[key] = value
         return destination
 
-    def merge(self, a, b):
+    def merge(self, b, a):
             ''' 
             Merges b into a and return merged result
             Lists are appended.
