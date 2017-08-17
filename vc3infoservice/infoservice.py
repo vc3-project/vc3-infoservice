@@ -103,15 +103,17 @@ class InfoHandler(object):
         except IndexError:
             raise Exception('path should have more than one key')
 
-    def merge(self, source, destination):
+    def oldmerge(self, source, destination):
         """
-        merges nested python dictionaries.
+        merges nested python dictionaries| lists | strings
         run me with nosetests --with-doctest file.py
     
         >>> a = { 'first' : { 'all_rows' : { 'pass' : 'dog', 'number' : '1' } } }
         >>> b = { 'first' : { 'all_rows' : { 'fail' : 'cat', 'number' : '5' } } }
         >>> merge(b, a) == { 'first' : { 'all_rows' : { 'pass' : 'dog', 'fail' : 'cat', 'number' : '5' } } }
         True
+        
+        
         """
         self.log.debug("source is type %s" % type(source))
         self.log.debug("destination is type %s" % type(destination))
@@ -124,6 +126,48 @@ class InfoHandler(object):
             else:
                 destination[key] = value
         return destination
+
+    def merge(self, a, b):
+            ''' 
+            Merges b into a and return merged result
+            Lists are appended.
+            Dictionaries are merged. 
+            Values overwritten. 
+            NOTE: tuples and arbitrary objects are not handled as it is totally ambiguous what should happen'''
+            key = None
+            # ## debug output
+            # sys.stderr.write("DEBUG: %s to %s\n" %(b,a))
+            try:
+                if a is None or isinstance(a, str) or isinstance(a, unicode) or isinstance(a, int) or isinstance(a, long) or isinstance(a, float):
+                    # border case for first run or if a is a primitive
+                    a = b
+                elif isinstance(a, list):
+                    # lists can be only appended
+                    if isinstance(b, list):
+                        # merge lists
+                        a.extend(b)
+                    else:
+                        # append to list
+                        a.append(b)
+                elif isinstance(a, dict):
+                    # dicts must be merged
+                    if isinstance(b, dict):
+                        for key in b:
+                            if key in a:
+                                a[key] = self.merge(a[key], b[key])
+                            else:
+                                a[key] = b[key]
+                    else:
+                        raise Exception('Cannot merge non-dict "%s" into dict "%s"' % (b, a))
+                else:
+                    raise Exception('NOT IMPLEMENTED "%s" into "%s"' % (b, a))
+            except TypeError, e:
+                raise Exception('TypeError "%s" in key "%s" when merging "%s" into "%s"' % (e, key, b, a))
+            return a
+
+
+
+
 
     ##################################################################################
     #   Infrastructural calls. 
