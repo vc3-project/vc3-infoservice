@@ -149,10 +149,14 @@ class InfoHandler(object):
                     # lists can be only appended
                     if isinstance(src, list):
                         # merge lists
-                        dest.extend(src)
+                        for item in src:
+                            if item not in dest:
+                                dest.append(item)
+                        #dest.extend(src)
                     else:
+                        self.log.debug("Refusing to add non-list %s to list %s" % (src, dest))
                         # append to list
-                        dest.append(src)
+                        #dest.append(src)
                 elif isinstance(dest, dict):
                     # dicts must be merged
                     if isinstance(src, dict):
