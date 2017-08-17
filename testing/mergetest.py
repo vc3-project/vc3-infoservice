@@ -45,44 +45,49 @@ class InfoHandler(object):
                 destination[key] = value
         return destination
 
-    def merge(self, a, b):
-        ''' 
-        Merges b into a and return merged result
-        Lists are appended.
-        Dictionaries are merged. 
-        Values overwritten. 
-        NOTE: tuples and arbitrary objects are not handled as it is totally ambiguous what should happen'''
-        key = None
-        # ## debug output
-        # sys.stderr.write("DEBUG: %s to %s\n" %(b,a))
-        try:
-            if a is None or isinstance(a, str) or isinstance(a, unicode) or isinstance(a, int) or isinstance(a, long) or isinstance(a, float):
-                # border case for first run or if a is a primitive
-                a = b
-            elif isinstance(a, list):
-                # lists can be only appended
-                if isinstance(b, list):
-                    # merge lists
-                    a.extend(b)
+    def merge(self, src, dest):
+            ''' 
+            Merges src into dest and returns merged result
+            Lists are appended.
+            Dictionaries are merged. 
+            Primitive values are overwritten. 
+            NOTE: tuples and arbitrary objects are not handled as it is totally ambiguous what should happen
+            https://stackoverflow.com/questions/7204805/dictionaries-of-dictionaries-merge/15836901
+            '''
+            key = None
+            # ## debug output
+            # sys.stderr.write("DEBUG: %s to %s\n" %(b,a))
+            self.log.debug("Handling merging %s into %s " % (src, dest))
+            try:
+                if dest is None or isinstance(dest, str) or isinstance(dest, unicode) or isinstance(dest, int) \
+                             or isinstance(dest, long) or isinstance(dest, float):
+                    # border case for first run or if a is a primitive
+                    dest = src
+                elif isinstance(dest, list):
+                    # lists can be only appended
+                    if isinstance(src, list):
+                        # merge lists
+                        dest.extend(src)
+                    else:
+                        # append to list
+                        dest.append(src)
+                elif isinstance(dest, dict):
+                    # dicts must be merged
+                    if isinstance(src, dict):
+                        for key in src:
+                            if key in dest:
+                                dest[key] = self.merge(src[key], dest[key])
+                            else:
+                                dest[key] = src[key]
+                    elif src is None:
+                        dest = None
+                    else:
+                        self.log.warning("Cannot merge non-dict %s into dict %s" % (src, dest))
                 else:
-                    # append to list
-                    a.append(b)
-            elif isinstance(a, dict):
-                # dicts must be merged
-                if isinstance(b, dict):
-                    for key in b:
-                        if key in a:
-                            a[key] = self.merge(a[key], b[key])
-                        else:
-                            a[key] = b[key]
-                else:
-                    raise Exception('Cannot merge non-dict "%s" into dict "%s"' % (b, a))
-            else:
-                raise Exception('NOT IMPLEMENTED "%s" into "%s"' % (b, a))
-        except TypeError, e:
-            raise Exception('TypeError "%s" in key "%s" when merging "%s" into "%s"' % (e, key, b, a))
-        return a
-
+                    raise Exception('NOT IMPLEMENTED "%s" into "%s"' % (src, dest))
+            except TypeError, e:
+                raise Exception('TypeError "%s" in key "%s" when merging "%s" into "%s"' % (e, key, src, dest))
+            return dest
 
 
     def mergetest(self):
@@ -121,6 +126,36 @@ class InfoHandler(object):
         print("Dest = %s" % des)
         out = self.merge(src, des)
         pprint.pprint(out)
+
+        print("*************************Test 3**********************")
+        src = { 'first' : { 'all_rows' : { 'animal' : 'dog', 
+                                          'number' : '5' } 
+                           },
+               }
+        print("Source = %s " % src)
+        des = { 'first' : None
+               }
+        print("Dest = %s" % des)
+        out = self.merge(src, des)
+        pprint.pprint(out)
+
+        print("*************************Test 4**********************")
+        src = { 'first' : { 'all_rows' : { 'animal' : 'dog', 
+                                          'number' : '5' } 
+                           },
+                'second' : None
+               }
+        print("Source = %s " % src)
+        des = { 'first' : { 'all_rows' : { 'animal' : 'cat', 
+                                          'number' : '1' } 
+                           },
+               'second' : { 'all_rows' : { 'plane' : 'jet',
+                                          'number' : '2' }} 
+               }
+        print("Dest = %s" % des)
+        out = self.merge(src, des)
+        pprint.pprint(out)
+
     
 if __name__ == '__main__':
     FORMAT='%(asctime)s (UTC) [ %(levelname)s ] %(name)s %(filename)s:%(lineno)d %(funcName)s(): %(message)s'

@@ -127,44 +127,49 @@ class InfoHandler(object):
                 destination[key] = value
         return destination
 
-    def merge(self, b, a):
+    def merge(self, src, dest):
             ''' 
-            Merges b into a and return merged result
+            Merges src into dest and returns merged result
             Lists are appended.
             Dictionaries are merged. 
-            Values overwritten. 
-            NOTE: tuples and arbitrary objects are not handled as it is totally ambiguous what should happen'''
+            Primitive values are overwritten. 
+            NOTE: tuples and arbitrary objects are not handled as it is totally ambiguous what should happen
+            https://stackoverflow.com/questions/7204805/dictionaries-of-dictionaries-merge/15836901
+            '''
             key = None
             # ## debug output
             # sys.stderr.write("DEBUG: %s to %s\n" %(b,a))
+            self.log.debug("Handling merging %s into %s " % (src, dest))
             try:
-                if a is None or isinstance(a, str) or isinstance(a, unicode) or isinstance(a, int) or isinstance(a, long) or isinstance(a, float):
+                if dest is None or isinstance(dest, str) or isinstance(dest, unicode) or isinstance(dest, int) \
+                             or isinstance(dest, long) or isinstance(dest, float):
                     # border case for first run or if a is a primitive
-                    a = b
-                elif isinstance(a, list):
+                    dest = src
+                elif isinstance(dest, list):
                     # lists can be only appended
-                    if isinstance(b, list):
+                    if isinstance(src, list):
                         # merge lists
-                        a.extend(b)
+                        dest.extend(src)
                     else:
                         # append to list
-                        a.append(b)
-                elif isinstance(a, dict):
+                        dest.append(src)
+                elif isinstance(dest, dict):
                     # dicts must be merged
-                    if isinstance(b, dict):
-                        for key in b:
-                            if key in a:
-                                a[key] = self.merge(a[key], b[key])
+                    if isinstance(src, dict):
+                        for key in src:
+                            if key in dest:
+                                dest[key] = self.merge(src[key], dest[key])
                             else:
-                                a[key] = b[key]
+                                dest[key] = src[key]
+                    elif src is None:
+                        dest = None
                     else:
-                        raise Exception('Cannot merge non-dict "%s" into dict "%s"' % (b, a))
+                        self.log.warning("Cannot merge non-dict %s into dict %s" % (src, dest))
                 else:
-                    raise Exception('NOT IMPLEMENTED "%s" into "%s"' % (b, a))
+                    raise Exception('NOT IMPLEMENTED "%s" into "%s"' % (src, dest))
             except TypeError, e:
-                raise Exception('TypeError "%s" in key "%s" when merging "%s" into "%s"' % (e, key, b, a))
-            return a
-
+                raise Exception('TypeError "%s" in key "%s" when merging "%s" into "%s"' % (e, key, src, dest))
+            return dest
 
 
 
