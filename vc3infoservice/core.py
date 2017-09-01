@@ -22,7 +22,7 @@ class InfoEntity(object):
     validvalues = {}
         
     def __repr__(self):
-        s = "%s(" % self.__class__.__name__
+        s = "%s( " % self.__class__.__name__
         for a in self.__class__.infoattributes:
             val = getattr(self, a, None)
             if isinstance(val, str) or isinstance(val, unicode):
