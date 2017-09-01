@@ -91,7 +91,12 @@ class InfoEntity(object):
         d = dict[name]
         args = {}
         for key in cls.infoattributes:
-            args[key] = d[key]
+            try:
+                args[key] = d[key]
+            except KeyError, e:
+                args[key] = None
+                log.warning("Document object does not have a '%s' key" % e.args[0])
         eo = cls(**args)
         log.debug("Successfully made object from dictionary, returning...")
         return eo
+
