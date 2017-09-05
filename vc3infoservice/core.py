@@ -19,6 +19,7 @@ class InfoEntity(object):
     '''
     infokey = 'unset'
     infoattributes = []
+    intattributes = []
     validvalues = {}
         
     def __repr__(self):
@@ -95,6 +96,12 @@ class InfoEntity(object):
                 args[key] = d[key]
             except KeyError, e:
                 args[key] = None
+                log.warning("Document object does not have a '%s' key" % e.args[0])
+        for key in cls.intattributes:
+            try:
+                if args[key] is not None:
+                    args[key] = int(args[key])
+            except KeyError, e:
                 log.warning("Document object does not have a '%s' key" % e.args[0])
         eo = cls(**args)
         log.debug("Successfully made object from dictionary, returning...")
