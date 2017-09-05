@@ -57,7 +57,7 @@ class DiskDump(object):
 
     def store_db(self):
         with open(self.dbname, 'w') as outfile:
-            outfile.write(json.dumps(self.documents))
+            outfile.write(json.dumps(self.documents, sort_keys=True, indent=4, separators=(',', ': ')))
 
     def load_db(self):
         try:
