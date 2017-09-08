@@ -26,9 +26,10 @@ from string import ascii_uppercase
 from optparse import OptionParser
 from ConfigParser import ConfigParser, NoOptionError
 
-import requests
-import urllib3
-requests.packages.urllib3.disable_warnings(urllib3.exceptions.SecurityWarning)
+#import requests
+#import urllib3
+#requests.packages.urllib3.disable_warnings(urllib3.exceptions.SecurityWarning)
+
 try:
     logging.captureWarnings(True)
 except AttributeError:
