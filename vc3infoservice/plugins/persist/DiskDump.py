@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import time
+import tempfile
 
 class DiskDump(object):
     
@@ -56,8 +57,30 @@ class DiskDump(object):
         return value
 
     def store_db(self):
-        with open(self.dbname, 'w') as outfile:
-            outfile.write(json.dumps(self.documents, sort_keys=True, indent=4, separators=(',', ': ')))
+
+        tmpfile = None
+        try:
+            tmpfile = tempfile.NamedTemporaryFile(mode = 'w', prefix = self.dbname, delete = False)
+        except IOError, e:
+            self.log.warn('Diskdump could not be performed. Could not open temporary file. (%s)', e)
+
+        try:
+            dump    = json.dumps(self.documents, sort_keys=True, indent=4, separators=(',', ': ')).encode('utf-8')
+            tmpfile.write(dump)
+            tmpfile.flush()
+            tmpfile.close()
+
+            towrite = len(dump)
+            written = os.stat(tmpfile.name).st_size
+
+            if towrite == written:
+                self.log.debug('renaming Diskdump %s to %s' % (tmpfile.name, self.dbname))
+                os.rename(tmpfile.name, self.dbname)
+            else:
+                self.log.warn('Diskdump could not be performed. Could not write the whole file. (%d != %d)', towrite, written)
+        except Exception, e:
+                self.log.warn('Diskdump could not be performed. (%s)', e)
+
 
     def load_db(self):
         try:
@@ -68,8 +91,8 @@ class DiskDump(object):
                 self.log.warn("Could not load db file %s" % self.dbname)
             else:
                 raise e
-        except ValueError:
-            self.log.error("Could not load db file %s" % self.dbname)
+        except ValueError, e:
+            self.log.error("Could not load db file %s. (%s)" % (self.dbname, e))
             os.rename(self.dbname, self.dbname + '.invalid.' + time.strftime('%Y%m%d.%H%M%S'))
             os.remove(self.dbname)
 
