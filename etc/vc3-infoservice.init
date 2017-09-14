@@ -83,7 +83,7 @@ fi
 CONFFILE=/etc/vc3/vc3-infoservice.conf
 LOGFILE=/var/log/vc3/$SERVICENAME.log
 CONSOLE_LOG=/var/log/vc3/${SERVICENAME}-console.log
-OPTIONS="--debug --runas=vc3 --log=$LOGFILE"
+OPTIONS=" --runas=vc3 --log=$LOGFILE"
 
 # Source settings from sysconfig
 # overriding default if present
