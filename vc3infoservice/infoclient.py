@@ -104,6 +104,7 @@ class InfoClient(object):
         
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)
+            raise ce
 
     def getdocument(self, key):
         '''
@@ -125,6 +126,7 @@ class InfoClient(object):
         
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)
+            raise ce
     
     def getdocumentobject(self, key):
         '''
@@ -144,6 +146,7 @@ class InfoClient(object):
         
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)       
+            raise ce
     
     def storedocumentobject(self, dict, key):
         '''
@@ -173,6 +176,7 @@ class InfoClient(object):
         
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)
+            raise ce
 
     def getbranch(self, *keys):
         doc = self.getdocument(key = keys[0])
@@ -214,6 +218,7 @@ class InfoClient(object):
             raise e
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)
+            raise ce
         
     def testquery(self):
         self.log.info("Testing storedocument. Doc = %s" % TESTDOC)
