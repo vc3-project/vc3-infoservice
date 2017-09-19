@@ -408,10 +408,12 @@ John Hover <jhover@bnl.gov>
         parser.add_option("--maxlogsize", dest="maxlogsize",
                           default=4096,
                           action="store",
+                          type="int",
                           help="Max log size, in MB.")
         parser.add_option("--logrotations", dest="logrotations",
                           default=2,
                           action="store",
+                          type="int",
                           help="Number of log backups to keep.")
 
         default_conf = "/etc/vc3/vc3-infoservice.conf"
