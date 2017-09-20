@@ -86,7 +86,7 @@ class DiskDump(object):
                 self.documents = json.load(infile)
         except IOError, e:
             if e.errno == errno.ENOENT:
-                self.log.warn("Could not load db file %s" % self.dbname)
+                self.log.warn("Could not load db file %s. (%s)" % (self.dbname, e))
             else:
                 raise e
         except ValueError, e:
