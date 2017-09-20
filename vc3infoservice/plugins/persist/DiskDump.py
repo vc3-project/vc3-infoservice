@@ -30,8 +30,6 @@ class DiskDump(object):
         return self.documents[key]
 
     def getdocument(self, key):
-        self.load_db()
-
         self.log.debug("Getting doc for key %s..." % key)
         try:
             s = self.documents[key]
