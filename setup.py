@@ -35,7 +35,7 @@ sysconfig_files = ['etc/sysconfig/vc3-infoservice', ]
 
 logrotate_files = ['etc/logrotate/vc3-infoservice', ]
 
-initd_files = ['etc/vc3-infoservice.init', ]
+initd_files = ['etc/vc3-infoservice.init.DONTUSE', ]
 
 rpm_data_files = [('/etc/vc3', etc_files),
                   ('/etc/sysconfig', sysconfig_files),
