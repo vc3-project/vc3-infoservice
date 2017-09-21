@@ -146,7 +146,7 @@ class InfoClient(object):
         
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)       
-            raise ce
+            raise InfoConnectionFailure("Connection Error.")
     
     def storedocumentobject(self, dict, key):
         '''
