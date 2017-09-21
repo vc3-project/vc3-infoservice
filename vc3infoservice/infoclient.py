@@ -373,9 +373,10 @@ John Hover <jhover@bnl.gov>
                           const=logging.WARNING, 
                           help="Set logging level to WARNING [default]")
 
-        default_conf = "~/etc/vc3/vc3-infoclient.conf"
+        default_conf = "/etc/vc3/vc3-infoclient.conf"
         if 'VC3_SERVICES_HOME' in os.environ:
-            default_conf = os.path.join(os.environ['VC3_SERVICES_HOME'], 'etc', 'vc3-infoclient.conf') + ',' + default_conf
+            # if running inside the builder...
+            default_conf = ','.join([default_conf, os.path.expanduser('~/vc3-services/etc/vc3-infoclient.conf'), os.path.expanduser('~/vc3-services/etc/vc3-infoclient-local.conf')])
 
         parser.add_option("-c","--config", dest="confFiles", 
                           default=default_conf,

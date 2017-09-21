@@ -5,12 +5,14 @@ Wants=network-online.target
 
 [Service]
 EnvironmentFile=-/etc/sysconfig/vc3-infoservice
-#ExecStart=/usr/bin/vc3-infoservice --conf /etc/vc3/vc3-infoservice.conf $OPTIONS
-ExecStart=/etc/init.d/vc3-infoservice.init start
-ExecStop=/etc/init.d/vc3-infoservice.init stop
-ExecReload=/etc/init.d/vc3-infoservice.init restart
-
+ExecStart=/usr/bin/vc3-infoservice $OPTIONS --runas=vc3 --conf=/etc/vc3/vc3-infoservice.conf --log=/var/log/vc3/infoservice.log
 Restart=on-failure
+
+#ExecStart=/usr/bin/vc3-infoservice --conf /etc/vc3/vc3-infoservice.conf $OPTIONS
+#ExecStart=/etc/init.d/vc3-infoservice.init start
+#ExecStop=/etc/init.d/vc3-infoservice.init stop
+#ExecReload=/etc/init.d/vc3-infoservice.init restart
+#Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
