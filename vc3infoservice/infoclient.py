@@ -101,11 +101,10 @@ class InfoClient(object):
         try:
             r = requests.put(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : doc})
             self.log.debug(r.status_code)
-        
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)
-            raise ce
-
+            raise InfoConnectionFailure(str(ce))
+        
     def getdocument(self, key):
         '''
         Get and return JSON string for document with key <key>
@@ -117,16 +116,10 @@ class InfoClient(object):
                             )
         try:
             r = requests.get(u, verify=self.chainfile, cert=(self.certfile, self.keyfile))
-            out = self.stripquotes(r.text)
-            parsed = json.loads(out)
-            pretty = json.dumps(parsed, indent=4, sort_keys=True)
-            #self.log.debug(pretty)
-            #self.log.debug(r.status_code)
             return r.text
-        
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)
-            raise ce
+            raise InfoConnectionFailure(str(ce))
     
     def getdocumentobject(self, key):
         '''
@@ -137,17 +130,13 @@ class InfoClient(object):
                             self.httpsport,
                             key
                             )
-        try:
-            r = requests.get(u, verify=self.chainfile, cert=(self.certfile, self.keyfile))
-            out = self.stripquotes(r.text)
-            parsed = json.loads(out)
-            pretty = json.dumps(parsed, indent=4, sort_keys=True)
-            return parsed
+
+        text = self.getdocument(key)
+        out = self.stripquotes(text)
+        parsed = json.loads(out)
+        pretty = json.dumps(parsed, indent=4, sort_keys=True)
+        return parsed
         
-        except requests.exceptions.ConnectionError, ce:
-            self.log.error('Connection failure. %s' % ce)       
-            raise InfoConnectionFailure("Connection Error.")
-    
     def storedocumentobject(self, dict, key):
         '''
         Directly store Python dictionary as JSON ...
@@ -176,7 +165,7 @@ class InfoClient(object):
         
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)
-            raise ce
+            raise InfoConnectionFailure(str(ce))
 
     def getbranch(self, *keys):
         doc = self.getdocument(key = keys[0])
@@ -218,7 +207,7 @@ class InfoClient(object):
             raise e
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)
-            raise ce
+            raise InfoConnectionFailure(str(ce))
         
     def testquery(self):
         self.log.info("Testing storedocument. Doc = %s" % TESTDOC)
