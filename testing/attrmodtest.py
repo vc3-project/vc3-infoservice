@@ -6,14 +6,12 @@ class InfoEntity(object):
     Template for Information entities. Common functions. 
     Classes that inherit from InfoEntity must set class variables to describe handling. 
     
-
     '''
     infokey = 'unset'
     infoattributes = []
     intattributes = []
     validvalues = {}
-    
-   
+       
     def __setattr__(self, name, value):
         '''
         _difflist   List of (info)attributes that have been changed (not just 
