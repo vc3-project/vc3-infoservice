@@ -63,6 +63,21 @@ class InfoHandler(object):
         self.log.debug("Storing document for key %s" % key)
         pd = json.loads(doc)
         self.persist.storedocument(key, pd)
+
+    def storeentity(self, key, doc):
+        '''
+        stores contents of doc by entity level. If entity already exists, does not 
+        do so.  
+        '''
+        self.log.debug("input doc to merge is type %s" % type(doc))
+        dcurrent = self.persist.getdocument(key)
+        self.log.debug("current retrieved doc is type %s" % type(dcurrent))
+        md = json.loads(doc)
+        self.log.debug("doc to merge is type %s" % type(md))
+        newdoc = self.merge( md, dcurrent)
+        self.log.debug("Merging document for key %s" % key)
+        self.persist.storedocument(key, newdoc)        
+    
    
     def mergedocument(self, key, doc):
         self.log.debug("input doc to merge is type %s" % type(doc))
@@ -73,6 +88,22 @@ class InfoHandler(object):
         newdoc = self.merge( md, dcurrent)
         self.log.debug("Merging document for key %s" % key)
         self.persist.storedocument(key, newdoc)
+
+    def mergeentity(self, key, doc):
+        '''
+        merges contents of doc by entity level. 
+        '''
+        self.log.debug("input doc to merge is type %s" % type(doc))
+        dcurrent = self.persist.getdocument(key)
+        self.log.debug("current retrieved doc is type %s" % type(dcurrent))
+        md = json.loads(doc)
+        self.log.debug("doc to merge is type %s" % type(md))
+        newdoc = self.merge( md, dcurrent)
+        self.log.debug("Merging document for key %s" % key)
+        self.persist.storedocument(key, newdoc)
+
+
+
     
     def getdocument(self, key):
         '''
@@ -175,6 +206,54 @@ class InfoHandler(object):
                 raise Exception('TypeError "%s" in key "%s" when merging "%s" into "%s"' % (e, key, src, dest))
             return dest
 
+    def newentitymerge(self, src, dest):
+            ''' 
+            Merges src into dest and returns merged result
+            If entity-level item exists already, merge is rejected. 
+            Lists are appended.
+            Dictionaries are merged. 
+            Primitive values are overwritten. 
+            NOTE: tuples and arbitrary objects are not handled as it is totally ambiguous what should happen
+            https://stackoverflow.com/questions/7204805/dictionaries-of-dictionaries-merge/15836901
+            '''
+            key = None
+            # ## debug output
+            # sys.stderr.write("DEBUG: %s to %s\n" %(b,a))
+            self.log.debug("Handling merging %s into %s " % (src, dest))
+            try:
+                if dest is None or isinstance(dest, str) or isinstance(dest, unicode) or isinstance(dest, int) \
+                             or isinstance(dest, long) or isinstance(dest, float):
+                    # border case for first run or if a is a primitive
+                    dest = src
+                elif isinstance(dest, list):
+                    # lists can be only appended
+                    if isinstance(src, list):
+                        # merge lists
+                        for item in src:
+                            if item not in dest:
+                                dest.append(item)
+                        #dest.extend(src)
+                    else:
+                        self.log.error("Refusing to add non-list %s to list %s" % (src, dest))
+                        # append to list
+                        #dest.append(src)
+                elif isinstance(dest, dict):
+                    # dicts must be merged
+                    if isinstance(src, dict):
+                        for key in src:
+                            if key in dest:
+                                dest[key] = self.merge(src[key], dest[key])
+                            else:
+                                dest[key] = src[key]
+                    elif src is None:
+                        dest = None
+                    else:
+                        self.log.warning("Cannot merge non-dict %s into dict %s" % (src, dest))
+                else:
+                    raise Exception('NOT IMPLEMENTED "%s" into "%s"' % (src, dest))
+            except TypeError, e:
+                raise Exception('TypeError "%s" in key "%s" when merging "%s" into "%s"' % (e, key, src, dest))
+            return dest
 
 
 

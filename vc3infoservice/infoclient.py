@@ -99,7 +99,7 @@ class InfoClient(object):
                             )
         self.log.debug("Trying to store document %s at %s" % (doc, u))
         try:
-            r = requests.put(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : doc})
+            r = requests.post(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : doc})
             self.log.debug(r.status_code)
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)

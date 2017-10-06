@@ -21,6 +21,42 @@ class InfoEntity(object):
     infoattributes = []
     intattributes = []
     validvalues = {}
+
+    def __setattr__(self, name, value):
+        '''
+        _difflist   List of (info)attributes that have been changed (not just 
+                    initialized once.  
+        '''
+        log = logging.getLogger()        
+        if name in self.__class__.infoattributes:
+            try:
+                diffmap = self._diffmap
+            except AttributeError:
+                diffmap = {}
+                for at in self.__class__.infoattributes:
+                    diffmap[at] = 0
+                object.__setattr__(self,'_diffmap', diffmap)
+            diffmap[name] += 1
+            log.debug('infoattribute %s' % name)            
+        else:
+            log.debug('non-infoattribute %s' % name)
+        object.__setattr__(self, name, value)
+
+
+    def getDiffInfo(self):
+        '''
+        Return a list of info attributes which have been set > 1 time. 
+        '''
+        retlist = []
+        try:
+            diffmap = self._diffmap
+        except AttributeError:
+            pass
+        for a in diffmap.keys():
+            if diffmap[a] > 1:
+                retlist.append(a)
+        return retlist
+
         
     def __repr__(self):
         s = "%s( " % self.__class__.__name__
@@ -36,15 +72,22 @@ class InfoEntity(object):
         s += ")"
         return s    
 
-    def makeDictObject(self):
+    def makeDictObject(self, newonly=False):
         '''
         Converts this Python object to attribute dictionary suitable for addition to existing dict 
         intended to be converted back to JSON. Uses <obj>.name as key:
         '''
         d = {}
         d[self.name] = {}
-        for attrname in self.infoattributes:
-            d[self.name][attrname] = getattr(self, attrname)
+        if newonly:
+            # only copy in values that have been re-set after initialization
+            difflist = self.getDiffInfo()
+            for attrname in difflist:
+                d[self.name][attrname] = getattr(self, attrname)
+        else:
+            # copy in all infoattribute values
+            for attrname in self.infoattributes:
+                d[self.name][attrname] = getattr(self, attrname)
         self.log.debug("Returning dict: %s" % d)
         return d    
 
