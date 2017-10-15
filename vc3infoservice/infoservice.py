@@ -496,6 +496,7 @@ John Hover <jhover@bnl.gov>
                           help="Number of log backups to keep.")
 
         default_conf = "/etc/vc3/vc3-infoservice.conf"
+        default_conf = ','.join([default_conf, os.path.expanduser('~/git/vc3-info-service/etc/vc3-infoservice.conf')])
         if 'VC3_SERVICES_HOME' in os.environ:
             # if running inside the builder...
             default_conf = ','.join([default_conf, os.path.expanduser('~/vc3-services/etc/vc3-infoservice.conf'), os.path.expanduser('~/vc3-services/etc/vc3-infoservice-local.conf')])
@@ -643,8 +644,10 @@ John Hover <jhover@bnl.gov>
         """
         if self.options.confFiles != None:
             try:
+                self.log.debug("Conf file list %s" % self.options.confFiles)
                 self.config = ConfigParser()
-                self.config.read(self.options.confFiles)
+                rfs = self.config.read(self.options.confFiles)
+                self.log.debug("Read config file(s) %s" % rfs)
             except Exception, e:
                 self.log.error('Config failure')
                 sys.exit(1)
