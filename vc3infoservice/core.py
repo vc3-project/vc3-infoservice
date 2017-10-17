@@ -11,6 +11,40 @@ __status__ = "Production"
 
 import logging
 
+class InfoConnectionFailure(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)   
+
+class InfoMissingPairingException(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)  
+
+class InfoEntityExistsException(Exception):
+    '''
+    Exception thrown when an attempt to create an entity with a 
+    name that already exists. Old entity must be deleted first. 
+     
+    '''
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)  
+
+class InfoEntityMissingException(Exception):
+    '''
+    Exception thrown when an attempt to *update* a non-existent entity is made.
+    Entity must be created before it can be updated.  
+    '''
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)  
+
+
 class InfoEntity(object):
     '''
     Template for Information entities. Common functions. 
@@ -95,9 +129,10 @@ class InfoEntity(object):
         self.log.debug("%s object name=%s %s ->%s" % (self.__class__.__name__, self.name, self.state, newstate) )
         self.state = newstate
     
+
     def store(self, infoclient):
         '''
-        Stores this Info Entity in the provided infoclient info tree. 
+        Updates this Info Entity in store behind given infoclient. 
         '''
         keystr = self.__class__.infokey
         validvalues = self.__class__.validvalues
@@ -108,9 +143,15 @@ class InfoEntity(object):
                 self.log.warning("%s entity has invalid value '%s' for attribute '%s' " % (self.__class__.__name__,
                                                                                            attrval,                                                                                            keyattr) )
         #resources = infoclient.getdocumentobject(key=keystr)
-        da = self.makeDictObject()
-        self.log.debug("Dict obj: %s" % da)
-        infoclient.storedocumentobject(da, key=keystr)
+        if hasattr(self, 'storenew'):
+            entdict = self.makeDictObject(newonly=False)
+            self.log.debug("Dict obj: %s" % entdict)
+            infoclient.storeentity(keystr, entdict )
+        else:
+            entdict = self.makeDictObject(newonly=True)
+            self.log.debug("Dict obj: %s" % entdict)
+            infoclient.mergeentity(keystr, entdict )
+        self.log.debug("Stored entity %s in key %s" % (self.name, keystr))
 
     def addAcl(self, aclstring):
         pass    
@@ -132,8 +173,9 @@ class InfoEntity(object):
         '''
         log = logging.getLogger()
         log.debug("Making object from dictionary...")
-        name = dict.keys()[0]
-        d = dict[name]
+        #name = dict.keys()[0]
+        #d = dict[name]
+        d = dict
         args = {}
         for key in cls.infoattributes:
             try:
@@ -150,4 +192,25 @@ class InfoEntity(object):
         eo = cls(**args)
         log.debug("Successfully made object from dictionary, returning...")
         return eo
+
+
+class InfoPersistencePlugin(object):
+
+    def __init__(self, parent, config, section ):
+        self.log = logging.getLogger()
+        self.lock = MockLock()
+        self.parent = parent
+        self.config = config
+        self.section = section
+
+class MockLock(object):
+    
+    def acquire(self):
+        pass
+        
+    def release(self):
+        pass
+        
+
+
 

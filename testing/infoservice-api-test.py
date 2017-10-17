@@ -12,9 +12,8 @@ import logging
 from ConfigParser import ConfigParser
 from vc3infoservice.core import InfoEntity
 from vc3infoservice import infoclient
-from vc3infoservice.infoclient import  InfoMissingPairingException, InfoConnectionFailure
+from vc3infoservice.core import  InfoMissingPairingException, InfoConnectionFailure, InfoEntityExistsException, InfoEntityMissingException
 
-   
 class User(InfoEntity):
     '''
     Represents a VC3 instance user account.
@@ -149,6 +148,8 @@ class AppClientAPI(object):
                   url = url,
                   docurl = docurl
                   )
+        # This must be set explicitly for newly-created entities, so entire map will be sent.
+        u.storenew = True
         self.log.debug("Creating user object: %s " % u)
         return u
     
@@ -156,6 +157,14 @@ class AppClientAPI(object):
     def storeUser(self, user):
         '''
         Stores the provided user in the infoservice. 
+        :param User u:  User to add. 
+        :return: None
+        '''
+        user.store(self.ic)
+    
+    def updateUser(self, user):
+        '''
+        Updates the provided user in the infoservice. 
         :param User u:  User to add. 
         :return: None
         '''
@@ -184,12 +193,11 @@ class AppClientAPI(object):
         self.log.debug("Got document object: %s " % docobj)
         olist = []
         try:
-            for oname in docobj[infokey].keys():
+            for oname in docobj.keys():
                     self.log.debug("Getting objectname %s" % oname)
                     #s = "{ '%s' : %s }" % (oname, docobj[infokey][oname] )
-                    nd = {}
-                    nd[oname] = docobj[infokey][oname]
-                    eo = klass.objectFromDict(nd)
+                    ed = docobj[oname]
+                    eo = klass.objectFromDict(ed)
                     self.log.debug("Appending eo %s" % eo)
                     olist.append(eo)
         except KeyError, e:
@@ -199,15 +207,24 @@ class AppClientAPI(object):
         return olist
 
 
-    def _getEntity(self, entityclass, objectname):
-        eolist = self._listEntities(entityclass)
-        self.log.debug("Got list of %d entity objects, matching entityclass %s..." % (len(eolist), 
-                                                                                     entityclass))
-        for eo in eolist:
-            if eo.name == objectname:
-                self.log.debug("Found object of correct name %s" % objectname)
-                return eo
-        self.log.debug("Didn't find desired objectname %s" % objectname)
+    def _getEntity(self, entityclass, entityname):
+        m = sys.modules[__name__] 
+        klass = getattr(m, entityclass)
+        infokey = klass.infokey
+        self.log.debug("Getting %s entity %s with infokey %s " % (entityclass, entityname, infokey))     
+        eobj = self.ic.getentityobject(infokey, entityname)
+        self.log.debug("Got entity object: %s " % eobj)
+        eo = klass.objectFromDict(eobj)
+        return eo
+                
+        #eolist = self._listEntities(entityclass)
+        #self.log.debug("Got list of %d entity objects, matching entityclass %s..." % (len(eolist), 
+        #                                                                             entityclass))
+        #for eo in eolist:
+        #    if eo.name == objectname:
+        #        self.log.debug("Found object of correct name %s" % objectname)
+        #        return eo
+        #self.log.debug("Didn't find desired objectname %s" % objectname)
 
     
 
@@ -218,26 +235,41 @@ if __name__ == '__main__':
     log = logging.getLogger()
     log.setLevel(logging.DEBUG)
     
-    
-    
     cp = ConfigParser()
     cp.read(os.path.expanduser("~/git/vc3-info-service/etc/vc3-infoclient.conf"))
     capi = AppClientAPI(cp)
     log.debug("Making user...")   
-    u = capi.defineUser( name = 'username',
-                         first = 'First',
-                         last = 'Last',
-                         email = 'flast@somewhere.org',
-                         organization = "somewhere.org",
-                         identity_id = None,
-                         description = 'A short description', 
-                         displayname = 'First Last', 
-                         url = "http://www.somewhere.org/flast", 
-                         docurl = "http://www.somewhere.org/docs"                                  
-                         )
-    log.debug("User is %s" % u)
-    log.debug('Storing user...')
-    capi.storeUser(u)
+
+    for uname in ['username', 'username2', 'username3']:
+        u = capi.defineUser( name = uname,
+                             first = 'First',
+                             last = 'Last',
+                             email = 'flast@somewhere.org',
+                             organization = "somewhere.org",
+                             identity_id = None,
+                             description = 'A short description', 
+                             displayname = 'First Last', 
+                             url = "http://www.somewhere.org/flast", 
+                             docurl = "http://www.somewhere.org/docs"                                  
+                             )
+        log.debug("User is %s" % u)
+        log.debug('Storing user "username"')
+        try:
+            capi.storeUser(u)
+        except InfoEntityExistsException, e:
+            log.debug("Got EntityExistsException...")    
+        log.debug("Stored user ")
+
+    log.debug("Getting user..")
+    u = capi.getUser('username')
+    u.email = 'newflastemail@somewhere.org'
+    capi.updateUser(u)
+    log.debug("User updated.")
+    
+    log.debug("Getting user..")
+    u = capi.getUser('username')
+    log.debug("User state: %s" % u)
+    
 
     log.debug("Getting users...")        
     ulist = capi.listUsers()

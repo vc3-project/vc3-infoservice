@@ -36,7 +36,7 @@ except AttributeError:
     # Some versions don't have this. 
     pass
 
-from vc3infoservice.core import InfoEntity
+from vc3infoservice.core import InfoEntity, InfoConnectionFailure, InfoMissingPairingException
 
 TESTKEY='testkey'
 TESTDOC='''{ 
@@ -51,17 +51,6 @@ TESTDOC='''{
                 }
            }'''
 
-class InfoConnectionFailure(Exception):
-    def __init__(self, value):
-        self.value = value
-    def __str__(self):
-        return repr(self.value)   
-
-class InfoMissingPairingException(Exception):
-    def __init__(self, value):
-        self.value = value
-    def __str__(self):
-        return repr(self.value)  
 
 
 class InfoClient(object):
@@ -87,12 +76,33 @@ class InfoClient(object):
       
         self.log.debug("Client initialized.")
 
+    def storeentity(self, key, edoc):
+        '''
+        Store JSON entity string <edoc> in infoservice under key <key>.
+        
+        '''
+        ename = edoc.keys()[0]
+        u = "https://%s:%s/info?key=%s&entityname=%s" % (self.infohost, 
+                                                         self.httpsport,
+                                                         key,
+                                                         ename
+                                                         )
+        self.log.debug("Trying to store entity %s at %s" % (edoc, u))
+        jdoc = json.dumps(edoc)
+        self.log.debug("Entity converted to JSON: '%s'" % jdoc)
+        try:
+            r = requests.post(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : jdoc})
+            self.log.debug(r.status_code)
+        except requests.exceptions.ConnectionError, ce:
+            self.log.error('Connection failure. %s' % ce)
+            raise InfoConnectionFailure(str(ce))
+
+
     def storedocument(self, key, doc):
         '''
         Store JSON string <doc> in infoservice under key <key>.
         
         '''
-        
         u = "https://%s:%s/info?key=%s" % (self.infohost, 
                             self.httpsport,
                             key
@@ -120,24 +130,45 @@ class InfoClient(object):
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)
             raise InfoConnectionFailure(str(ce))
+
+    def getentity(self, key, entityname):
+        '''
+        Get and return JSON string for entity <entityname> in key <key>.
+        '''
+        u = "https://%s:%s/info?key=%s&entityname=%s" % (self.infohost, 
+                            self.httpsport,
+                            key,
+                            entityname
+                            )
+        try:
+            r = requests.get(u, verify=self.chainfile, cert=(self.certfile, 
+                                                             self.keyfile))
+            return r.text
+        except requests.exceptions.ConnectionError, ce:
+            self.log.error('Connection failure. %s' % ce)
+            raise InfoConnectionFailure(str(ce))
+
+    def getentityobject(self, key, entityname):
+        '''
+        Get JSON entity and converts to Python and return. 
+        '''
+        text = self.getentity(key, entityname)
+        out = self.stripquotes(text)
+        parsed = json.loads(out)
+        pretty = json.dumps(parsed, indent=4, sort_keys=True)
+        return parsed
     
     def getdocumentobject(self, key):
         '''
         Get JSON doc and convert to Python and return. 
-        
         '''
-        u = "https://%s:%s/info?key=%s" % (self.infohost, 
-                            self.httpsport,
-                            key
-                            )
-
         text = self.getdocument(key)
         out = self.stripquotes(text)
         parsed = json.loads(out)
         pretty = json.dumps(parsed, indent=4, sort_keys=True)
         return parsed
         
-    def storedocumentobject(self, dict, key):
+    def storedocumentobject(self, key, dict):
         '''
         Directly store Python dictionary as JSON ...
         
@@ -150,7 +181,19 @@ class InfoClient(object):
         jstr = json.dumps(dict)
         self.log.debug("JSON string: %s" % jstr)
         self.storedocument(key, jstr)
+
+    def storeentityobject(self, dict, key):
+        '''
+        Directly store Python dictionary as JSON ...
         
+        '''
+        if key not in dict.keys():
+            td = {}
+            td[key] = dict
+            dict = td    
+        jstr = json.dumps(dict)
+        self.log.debug("JSON string: %s" % jstr)
+        self.storeentity(key, jstr)
     
     def mergedocument(self, key, doc):
                 
@@ -166,6 +209,28 @@ class InfoClient(object):
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)
             raise InfoConnectionFailure(str(ce))
+
+    def mergeentity(self, key, edoc):
+        '''
+        Update existing entity
+        '''
+        ename = edoc.keys()[0]
+        u = "https://%s:%s/info?key=%s&entityname=%s" % (self.infohost, 
+                                                         self.httpsport,
+                                                         key,
+                                                         ename
+                                                         )
+        self.log.debug("Trying to merge document %s at %s" % (edoc, u))
+        jdoc = json.dumps(edoc)
+        self.log.debug("Entity converted to JSON: '%s'" % jdoc)
+        try:
+            r = requests.put(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : jdoc})
+            self.log.debug(r.status_code)
+        
+        except requests.exceptions.ConnectionError, ce:
+            self.log.error('Connection failure. %s' % ce)
+            raise InfoConnectionFailure(str(ce))
+
 
     def getbranch(self, *keys):
         doc = self.getdocument(key = keys[0])
@@ -183,12 +248,17 @@ class InfoClient(object):
     def getsubtree(self, path):
         pass
     
+    
+    def deleteentity(self, key, entityname):
+        '''
+        deletes given entityname from key
+        
+        '''
+    
     def deletesubtree(self, path):
         '''
         Delete the leaf given by path.
-        
         '''
-
         try:
             keys = path.split('.')
             key  = keys[0]

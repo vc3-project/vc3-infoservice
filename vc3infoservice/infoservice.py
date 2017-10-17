@@ -27,6 +27,7 @@ import traceback
 from optparse import OptionParser
 from ConfigParser import ConfigParser
 
+from vc3infoservice.core  import InfoEntityExistsException, InfoEntityMissingException
 
 # Since script is in package "vc3" we can know what to add to path for 
 # running directly during development
@@ -40,7 +41,14 @@ class InfoHandler(object):
     Handles low-level operations and persistence of information 
     from service using back-end plugin.
     
-    Data at this level is converted to/from native Python objects for storage/retrieval
+    Inbound arguments of InfoServiceAPI are JSON strings. These are converted to Python 
+    primitive objects for persistence plugin calls. 
+
+    inbound entities are expected to be in the form of JSON with entity.name indices, e.g.
+        '{ "name" : { "name" : "namevalue", "key1" : "val1" }}' 
+    
+    returned entities are in the form of unindexed entity JSON dictionaries , e.g. 
+        '{ "name" : "namevalue", "key1" : "val1" }'
      
     '''
     def __init__(self, config):
@@ -57,159 +65,182 @@ class InfoHandler(object):
                                     name=pluginname, 
                                     config=self.config, 
                                     section=psect)
-        self.log.debug("Done initting InfoHandler")
+        self.log.debug("Done initializing InfoHandler")
 
+################################################################################
+#                     Entity-oriented methods
+################################################################################
+
+    def storeentity(self, key, entityname, edoc):
+        '''
+        Stores contents of JSON doc string by entity level. If entity already exists, does not 
+        do so. 
+        
+        Entity doc:  
+         {"username": {"last": "Last", 
+                        "name": "username", 
+                        "acl": null,
+                       }
+                   }
+        '''
+        self.log.debug("input JSON doc to merge is %s" % edoc)
+        entitydict = json.loads(edoc)
+        self.persist.lock.acquire()
+        try:
+            currentdoc = self.persist.getdocument(key)
+            try:
+                existingentity = currentdoc[entityname]
+                raise InfoEntityExistsException('Entity %s already exists.' % entityname)
+            except KeyError:
+                self.log.debug("No existing entity %s. As expected..." % entityname)
+                pass
+            
+            self.log.debug("Merging entity with existing document.")
+            newdoc = self.merge( entitydict, currentdoc)
+            self.persist.storedocument(key, newdoc)
+            self.log.debug("Successfully stored entity.")            
+        finally:
+            self.persist.lock.release()        
+
+    
+    def mergeentity(self, key, entityname, edoc):
+        '''
+        merges contents of JSON doc string by entity level. 
+        '''
+        self.log.debug("input doc to merge is %s" % edoc)       
+        self.log.debug("input JSON doc to merge is type %s" % type(edoc))
+        entitydict = json.loads(edoc)
+        self.persist.lock.acquire()
+        try:
+            currentdoc = self.persist.getdocument(key)
+            existingentity = currentdoc[entityname]
+            self.log.debug("Merging entity with existing document.")
+            newdoc = self.merge( entitydict, currentdoc)
+            self.persist.storedocument(key, newdoc)
+            self.log.debug("Successfully stored entity.")            
+        except KeyError:
+            raise InfoMissingEntityException('Entity %s not found to merge with.' % entityname)       
+        finally:
+            self.persist.lock.release()        
+
+
+    def getentity(self, key, entityname):
+        '''
+        Gets JSON representation of entity.
+        
+        { 'name' : <entityname>',
+          'key1'  : '<val1>'
+        }
+        '''
+        currentdoc = self.persist.getdocument(key)
+        self.log.debug("Current doc for %s is %s" % (key, currentdoc))
+        ed = currentdoc[entityname]
+        je = json.dumps(ed)
+        self.log.debug("JSON entity is %s" % str(je))
+        return je
+
+
+    def deleteentity(self, key, entityname):
+        '''
+        deletes relevant entity, if it exists. 
+        '''
+        self.persist.lock.acquire()
+        try:
+            doc = self.persist.getdocument(key)
+            self.log.debug("Deleting entity %s in key %s" % (entityname, key))
+            doc.pop(entityname)
+            self.persist.storedocument(key, doc)
+            self.log.debug("Successfully stored.")            
+        except KeyError:
+            self.log.warning("Entity %s not found, so can't delete it." % entityname)
+        finally:
+            self.persist.lock.release()   
+
+################################################################################
+#                     Category document-oriented methods
+################################################################################
+  
     def storedocument(self, key, doc):
+        '''
+        Overwrites existing document with new.
+        '''
         self.log.debug("Storing document for key %s" % key)
         pd = json.loads(doc)
-        self.persist.storedocument(key, pd)
-
-    def storeentity(self, key, doc):
-        '''
-        stores contents of doc by entity level. If entity already exists, does not 
-        do so.  
-        '''
-        self.log.debug("input doc to merge is type %s" % type(doc))
-        dcurrent = self.persist.getdocument(key)
-        self.log.debug("current retrieved doc is type %s" % type(dcurrent))
-        md = json.loads(doc)
-        self.log.debug("doc to merge is type %s" % type(md))
-        newdoc = self.merge( md, dcurrent)
-        self.log.debug("Merging document for key %s" % key)
-        self.persist.storedocument(key, newdoc)        
+        self.persist.lock.acquire()
+        try:
+            self.persist.storedocument(key, pd)
+        finally:
+            self.persist.lock.release()
     
-   
     def mergedocument(self, key, doc):
-        self.log.debug("input doc to merge is type %s" % type(doc))
-        dcurrent = self.persist.getdocument(key)
-        self.log.debug("current retrieved doc is type %s" % type(dcurrent))
-        md = json.loads(doc)
-        self.log.debug("doc to merge is type %s" % type(md))
-        newdoc = self.merge( md, dcurrent)
         self.log.debug("Merging document for key %s" % key)
-        self.persist.storedocument(key, newdoc)
+        self.persist.lock.acquire()
+        try:
+            dcurrent = self.persist.getdocument(key)
+            #pd = json.loads(doc)
+            
+            self.persist.storedocument(key, pd)
+        finally:
+            self.persist.lock.release()
 
-    def mergeentity(self, key, doc):
-        '''
-        merges contents of doc by entity level. 
-        '''
-        self.log.debug("input doc to merge is type %s" % type(doc))
-        dcurrent = self.persist.getdocument(key)
-        self.log.debug("current retrieved doc is type %s" % type(dcurrent))
-        md = json.loads(doc)
-        self.log.debug("doc to merge is type %s" % type(md))
-        newdoc = self.merge( md, dcurrent)
-        self.log.debug("Merging document for key %s" % key)
-        self.persist.storedocument(key, newdoc)
+        self.persist.lock.acquire()
+        try:
+            dcurrent = self.persist.getdocument(key)
+            self.log.debug("current retrieved doc is type %s" % type(dcurrent))
+            md = json.loads(doc)
+            self.log.debug("doc to merge is type %s" % type(md))
+            newdoc = self.merge( md, dcurrent)
+            self.log.debug("Merging document for key %s" % key)
+            self.persist.storedocument(key, newdoc)
+        finally:
+            self.persist.lock.release()      
 
+    def deletedocument(self, key):
+        self.log.debug("Deleting document for key %s" % key)
+        #pd = json.loads(doc)
+        self.persist.lock.acquire()
+        emptydict = {}
+        try:
+            self.persist.storedocument(key, emptydict)
+        finally:
+            self.persist.lock.release()
 
-
-    
     def getdocument(self, key):
         '''
         Gets JSON representation of document. 
         '''
-        pd = self._getpythondocument(key)
+        pd = self.persist.getdocument(key)
         jd = json.dumps(pd)
         self.log.debug("d is type %s" % type(jd))
         return jd
 
-    def _getpythondocument(self, key):
-        '''
-        Gets Python object. 
-        '''
-        d = self.persist.getdocument(key)
-        self.log.debug("d is type %s with value %s" % (type(d), d))
-        return d
-    
-    def _storepythondocument(self, key, pd):
-        self.log.debug("Storing document for key %s" % key)
-        self.persist.storedocument(key, pd)
-    
-    
-    def deletesubtree(self, path):
-        lst = path.split('.')
-        try:
-            self.persist.deletesubtree(lst)
-        except IndexError:
-            raise Exception('path should have more than one key')
+################################################################################
+#                     Utility methods
+################################################################################
 
-    def oldmerge(self, source, destination):
-        """
-        merges nested python dictionaries| lists | strings
-        run me with nosetests --with-doctest file.py
+#    def _getpythondocument(self, key):
+#        '''
+#        Gets Python object. 
+#        '''
+#        d = self.persist.getdocument(key)
+#        self.log.debug("d is type %s with value %s" % (type(d), d))
+#        return d
     
-        >>> a = { 'first' : { 'all_rows' : { 'pass' : 'dog', 'number' : '1' } } }
-        >>> b = { 'first' : { 'all_rows' : { 'fail' : 'cat', 'number' : '5' } } }
-        >>> merge(b, a) == { 'first' : { 'all_rows' : { 'pass' : 'dog', 'fail' : 'cat', 'number' : '5' } } }
-        True
-        
-        
-        """
-        self.log.debug("source is type %s" % type(source))
-        self.log.debug("destination is type %s" % type(destination))
-        for key, value in source.items():
-            self.log.debug("processing node %s" % key)
-            if isinstance(value, dict):
-                # get node or create one
-                node = destination.setdefault(key, {})
-                self.merge(value, node)
-            else:
-                destination[key] = value
-        return destination
+#    def _storepythondocument(self, key, pd):
+#        self.log.debug("Storing document for key %s" % key)
+#        self.persist.storedocument(key, pd)
+    
+    
+#    def deletesubtree(self, path):
+#        lst = path.split('.')
+#        try:
+#            self.persist.deletesubtree(lst)
+#        except IndexError:
+#            raise Exception('path should have more than one key')
 
     def merge(self, src, dest):
             ''' 
-            Merges src into dest and returns merged result
-            Lists are appended.
-            Dictionaries are merged. 
-            Primitive values are overwritten. 
-            NOTE: tuples and arbitrary objects are not handled as it is totally ambiguous what should happen
-            https://stackoverflow.com/questions/7204805/dictionaries-of-dictionaries-merge/15836901
-            '''
-            key = None
-            # ## debug output
-            # sys.stderr.write("DEBUG: %s to %s\n" %(b,a))
-            self.log.debug("Handling merging %s into %s " % (src, dest))
-            try:
-                if dest is None or isinstance(dest, str) or isinstance(dest, unicode) or isinstance(dest, int) \
-                             or isinstance(dest, long) or isinstance(dest, float):
-                    # border case for first run or if a is a primitive
-                    dest = src
-                elif isinstance(dest, list):
-                    # lists can be only appended
-                    if isinstance(src, list):
-                        # merge lists
-                        for item in src:
-                            if item not in dest:
-                                dest.append(item)
-                        #dest.extend(src)
-                    else:
-                        self.log.error("Refusing to add non-list %s to list %s" % (src, dest))
-                        # append to list
-                        #dest.append(src)
-                elif isinstance(dest, dict):
-                    # dicts must be merged
-                    if isinstance(src, dict):
-                        for key in src:
-                            if key in dest:
-                                dest[key] = self.merge(src[key], dest[key])
-                            else:
-                                dest[key] = src[key]
-                    elif src is None:
-                        dest = None
-                    else:
-                        self.log.warning("Cannot merge non-dict %s into dict %s" % (src, dest))
-                else:
-                    raise Exception('NOT IMPLEMENTED "%s" into "%s"' % (src, dest))
-            except TypeError, e:
-                raise Exception('TypeError "%s" in key "%s" when merging "%s" into "%s"' % (e, key, src, dest))
-            return dest
-
-    def newentitymerge(self, src, dest):
-            ''' 
-            Merges src into dest and returns merged result
-            If entity-level item exists already, merge is rejected. 
+            Merges python primitive object src into dest and returns merged result.
             Lists are appended.
             Dictionaries are merged. 
             Primitive values are overwritten. 
@@ -256,10 +287,9 @@ class InfoHandler(object):
             return dest
 
 
-
-    ##################################################################################
-    #   Infrastructural calls. 
-    ##################################################################################
+##################################################################################
+#                             Infrastructural methods 
+##################################################################################
     
     def getpairing(self, key, pairingcode):
         '''
@@ -302,7 +332,6 @@ class InfoHandler(object):
         '''
         pass
    
-   
 
 class InfoRoot(object):
 
@@ -317,8 +346,7 @@ class InfoRoot(object):
 class InfoServiceAPI(object):
     ''' 
         Data at this level is assumed to be  JSON text/plain. 
-       
-           
+    
     '''
     exposed = True 
     
@@ -328,13 +356,15 @@ class InfoServiceAPI(object):
         self.infohandler = InfoHandler(config)
         self.log.debug("InfoServiceAPI init done." )
     
-    def GET(self, key, pairingcode=None):
-        self.log.debug("Client wsgi_environ: %s" % str(cherrypy.request.wsgi_environ))
-        self.log.debug("Client headers: %s" % str(cherrypy.request.headers))
-        if pairingcode is None:
+    def GET(self, key, pairingcode=None, entityname=None):
+        if pairingcode is None and entityname is None:
             d = self.infohandler.getdocument(key) 
-            self.log.debug("Document retrieved for key %s with val %s" % (key,d))
+            self.log.debug("Document retrieved for key %s " % key)
             return d
+        elif pairingcode is None:
+            e = self.infohandler.getentity(key, entityname) 
+            self.log.debug("Entity retrieved for key %s and name %s" % (key,entityname))
+            return e
         else:
             self.log.debug("Handling pairing retrieval")
             d = self.infohandler.getpairing(key, pairingcode)
@@ -342,19 +372,32 @@ class InfoServiceAPI(object):
             return d
 
     @cherrypy.tools.accept(media='text/plain')
-    def PUT(self, key, data):
-        self.log.debug("Client headers: %s" % str(cherrypy.request.headers))
-        self.log.debug("Storing document %s" % data)
-        self.infohandler.mergedocument(key, data)
-        self.log.debug("Document stored for key %s" % key)
-        return "Document stored for key %s\n" % key
+    def PUT(self, key, entityname=None, data=None):
+        rtext = "Something went wrong..."
+        if entityname is None:
+            self.log.debug("Storing document %s" % data)
+            self.infohandler.mergedocument(key, data)
+            self.log.debug("Document stored for key %s" % key)
+            rtext= "Document stored for key %s\n" % key
+        else:
+            self.log.debug("Storing key %s entityname %s " % (key, entityname))
+            self.infohandler.mergeentity(key, entityname, data)
+            rtext= "Entity %s stored in key %s\n" % (entityname, key )
+        return rtext
+
         
-    def POST(self, key, data):
-        self.log.debug("Client headers: %s" % str(cherrypy.request.headers))
-        self.log.debug("Storing document %s" % data)
-        self.infohandler.storedocument(key, data)
-        self.log.debug("Document stored for key %s" % key)
-        return "Document stored for key %s\n" % key
+    def POST(self, key, entityname=None, data=None):
+        rtext = "Something went wrong..."
+        if entityname is None:
+            self.log.debug("Storing document %s" % data)
+            self.infohandler.storedocument(key, data)
+            self.log.debug("Document stored for key %s" % key)
+            rtext= "Document stored for key %s\n" % key
+        else:
+            self.log.debug("Storing key %s entityname %s " % (key, entityname))
+            self.infohandler.storeentity(key, entityname, data)
+            rtext= "Entity %s stored in key %s\n" % (entityname, key )
+        return rtext
         
     def DELETE(self, key, name):
         '''
