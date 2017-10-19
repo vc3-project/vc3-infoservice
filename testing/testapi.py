@@ -125,7 +125,7 @@ if __name__ == '__main__':
     FORMAT='%(asctime)s (UTC) [ %(levelname)s ] %(name)s %(filename)s:%(lineno)d %(funcName)s(): %(message)s'
     logging.basicConfig(format=FORMAT)
     log = logging.getLogger()
-    log.setLevel(logging.DEBUG)
+    log.setLevel(logging.INFO)
     
     cp = ConfigParser()
     cp.read(os.path.expanduser("~/git/vc3-info-service/etc/vc3-infoclient.conf"))
@@ -173,44 +173,44 @@ if __name__ == '__main__':
             capi.storeUser(u)
         except InfoEntityExistsException, e:
             log.debug("Got EntityExistsException...")    
-        log.debug("Stored user ")
+        log.info("Stored user ")
 
-    log.debug("Getting user..")
+    log.info("Getting user..")
     try:
         u = capi.getUser('username')
         u.email = 'newflastemail@somewhere.org'
         capi.updateUser(u)
-        log.debug("User updated.")
+        log.info("User updated.")
     except InfoEntityMissingException:
-        log.debug("No such user.")    
+        log.info("No such user.")    
     
     # Get particular user 1
-    log.debug("Getting user..")
+    log.info("Getting user..")
     try:
         u = capi.getUser('username')
-        log.debug("User state: %s" % u)
+        log.info("User state: %s" % u)
     except InfoEntityMissingException:
-        log.debug("No such user.")
+        log.info("No such user.")
 
     # Get non-exisent user user
-    log.debug("Getting user..")
+    log.info("Getting user..")
     try:
         u = capi.getUser('username2')
-        log.debug("User state: %s" % u)
+        log.info("User state: %s" % u)
     
     except InfoEntityMissingException:
-        log.debug("No such user.")
+        log.info("No such user.")
     
       
     # Print all users...
-    log.debug("Getting users...")        
+    log.info("Getting users...")        
     ulist = capi.listUsers()
     for u in ulist:
         print(u)
     
     if len(ulist) > 2:
         for u in ulist[2:]:
-            log.debug("Deleting user %s" % u.name)
+            log.info("Deleting user %s" % u.name)
             capi.deleteUser(u.name)
     
     
