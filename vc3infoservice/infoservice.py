@@ -90,7 +90,8 @@ class InfoHandler(object):
             currentdoc = self.persist.getdocument(key)
             try:
                 existingentity = currentdoc[entityname]
-                raise InfoEntityExistsException('Entity %s already exists.' % entityname)
+                cherrypy.response.status = 405
+                return "Attempt to create (POST) already-existing Entity. Name: %s. " % entityname
             except KeyError:
                 self.log.debug("No existing entity %s. As expected..." % entityname)
                 pass
@@ -119,7 +120,8 @@ class InfoHandler(object):
             self.persist.storedocument(key, newdoc)
             self.log.debug("Successfully stored entity.")            
         except KeyError:
-            raise InfoMissingEntityException('Entity %s not found to merge with.' % entityname)       
+            cherrypy.response.status = 405
+            return "Attempt to update (PUT) non-existent Entity. Name: %s. " % entityname
         finally:
             self.persist.lock.release()        
 
@@ -130,14 +132,19 @@ class InfoHandler(object):
         
         { 'name' : <entityname>',
           'key1'  : '<val1>'
-        }
+        }        
         '''
         currentdoc = self.persist.getdocument(key)
         self.log.debug("Current doc for %s is %s" % (key, currentdoc))
-        ed = currentdoc[entityname]
-        je = json.dumps(ed)
-        self.log.debug("JSON entity is %s" % str(je))
-        return je
+        try:
+            ed = currentdoc[entityname]
+            je = json.dumps(ed)
+            self.log.debug("JSON entity is %s" % str(je))
+            return je
+        except KeyError:
+            cherrypy.response.status = 405
+            return "Attempt to GET non-existent Entity. Name: %s. " % entityname
+            #raise InfoEntityMissingException("Attempt to update or get a non-existent Entity.")
 
 
     def deleteentity(self, key, entityname):
@@ -399,17 +406,13 @@ class InfoServiceAPI(object):
             rtext= "Entity %s stored in key %s\n" % (entityname, key )
         return rtext
         
-    def DELETE(self, key, name):
+    def DELETE(self, key, entityname ):
         '''
-        Unusual call that operates on node provided in path only. Path expressed as node 'name' attribute. 
-        /info/<key>/<name>/
-        Deletion only occurs if identity is allowed delete by ACL at <name>: { 'acl' :<acl> } 
+        Deletes specified entity from <key> document. 
         '''
-        self.log.debug("Client headers: %s" % str(cherrypy.request.headers))
-        self.log.debug("Deleting subtree %s" % name)
-        self.infohandler.deletesubtree(name)
-        self.log.debug("Subtree deleted at %s" % name)
-        return "Subtree deleted at %s" % name
+        self.infohandler.deleteentity(key, entityname)
+        rtext= "Entity %s deleted in key %s\n" % (entityname, key )
+        return rtext
 
 
     def stripquotes(self,s):

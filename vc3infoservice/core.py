@@ -146,11 +146,11 @@ class InfoEntity(object):
         if hasattr(self, 'storenew'):
             entdict = self.makeDictObject(newonly=False)
             self.log.debug("Dict obj: %s" % entdict)
-            infoclient.storeentity(keystr, entdict )
+            infoclient._storeentitydict(keystr, entdict )
         else:
             entdict = self.makeDictObject(newonly=True)
             self.log.debug("Dict obj: %s" % entdict)
-            infoclient.mergeentity(keystr, entdict )
+            infoclient._mergeentitydict(keystr, entdict )
         self.log.debug("Stored entity %s in key %s" % (self.name, keystr))
 
     def addAcl(self, aclstring):
