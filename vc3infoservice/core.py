@@ -12,12 +12,19 @@ __status__ = "Production"
 import logging
 
 class InfoConnectionFailure(Exception):
+    '''
+    Network connection failure exception. 
+    '''
     def __init__(self, value):
         self.value = value
     def __str__(self):
         return repr(self.value)   
 
 class InfoMissingPairingException(Exception):
+    '''
+    Exception thrown when a pairing code is invalid, either because it never existed
+    or the pairing has already been retrieved. 
+    '''
     def __init__(self, value):
         self.value = value
     def __str__(self):
