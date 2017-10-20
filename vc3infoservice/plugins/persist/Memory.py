@@ -1,12 +1,14 @@
 import logging
+import threading
+from vc3infoservice.core import InfoPersistencePlugin
 
-class Memory(object):
-    
+class Memory(InfoPersistencePlugin):
+    '''
+    Memory persistence plugin. Takes inbound Python primitive documents and simply keeps them in memory. 
+    '''
     def __init__(self, parent, config, section ):
-        self.log = logging.getLogger()
-        self.parent = parent
-        self.config = config
-        self.section = section
+        super(Memory, self).__init__(parent, config, section)
+        self.lock = threading.Lock()
         self.documents = {}
         self.log.debug("Memory persistence plugin initialized...")
         
@@ -14,7 +16,15 @@ class Memory(object):
         self.log.debug("Storing doc for key %s..." % key)
         self.documents[key] = doc
 
-    def deletesubtree(self, path):
+    def getdocument(self, key):
+        self.log.debug("Getting doc for key %s..." % key)
+        try:
+            s = self.documents[key]
+        except KeyError, e:
+            s = {}
+        return s
+
+    def _deletesubtree(self, path):
         self.log.debug("Deleting path %s..." % str(path))
 
         if len(path) < 1:
@@ -28,15 +38,5 @@ class Memory(object):
         value = last_dict[path[-1]]
         del last_dict[path[-1]]
 
-        return value
-        
-    def getdocument(self, key):
-        self.log.debug("Getting doc for key %s..." % key)
-        try:
-            s = self.documents[key]
-        except KeyError, e:
-            s = {}
-        return s
-        
-        
-        
+        return value        
+       

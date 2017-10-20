@@ -11,6 +11,40 @@ __status__ = "Production"
 
 import logging
 
+class InfoConnectionFailure(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)   
+
+class InfoMissingPairingException(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)  
+
+class InfoEntityExistsException(Exception):
+    '''
+    Exception thrown when an attempt to create an entity with a 
+    name that already exists. Old entity must be deleted first. 
+     
+    '''
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)  
+
+class InfoEntityMissingException(Exception):
+    '''
+    Exception thrown when an attempt to *update* a non-existent entity is made.
+    Entity must be created before it can be updated.  
+    '''
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)  
+
+
 class InfoEntity(object):
     '''
     Template for Information entities. Common functions. 
@@ -21,6 +55,42 @@ class InfoEntity(object):
     infoattributes = []
     intattributes = []
     validvalues = {}
+
+    def __setattr__(self, name, value):
+        '''
+        _difflist   List of (info)attributes that have been changed (not just 
+                    initialized once.  
+        '''
+        log = logging.getLogger()        
+        if name in self.__class__.infoattributes:
+            try:
+                diffmap = self._diffmap
+            except AttributeError:
+                diffmap = {}
+                for at in self.__class__.infoattributes:
+                    diffmap[at] = 0
+                object.__setattr__(self,'_diffmap', diffmap)
+            diffmap[name] += 1
+            log.debug('infoattribute %s' % name)            
+        else:
+            log.debug('non-infoattribute %s' % name)
+        object.__setattr__(self, name, value)
+
+
+    def getDiffInfo(self):
+        '''
+        Return a list of info attributes which have been set > 1 time. 
+        '''
+        retlist = []
+        try:
+            diffmap = self._diffmap
+        except AttributeError:
+            pass
+        for a in diffmap.keys():
+            if diffmap[a] > 1:
+                retlist.append(a)
+        return retlist
+
         
     def __repr__(self):
         s = "%s( " % self.__class__.__name__
@@ -36,15 +106,22 @@ class InfoEntity(object):
         s += ")"
         return s    
 
-    def makeDictObject(self):
+    def makeDictObject(self, newonly=False):
         '''
         Converts this Python object to attribute dictionary suitable for addition to existing dict 
         intended to be converted back to JSON. Uses <obj>.name as key:
         '''
         d = {}
         d[self.name] = {}
-        for attrname in self.infoattributes:
-            d[self.name][attrname] = getattr(self, attrname)
+        if newonly:
+            # only copy in values that have been re-set after initialization
+            difflist = self.getDiffInfo()
+            for attrname in difflist:
+                d[self.name][attrname] = getattr(self, attrname)
+        else:
+            # copy in all infoattribute values
+            for attrname in self.infoattributes:
+                d[self.name][attrname] = getattr(self, attrname)
         self.log.debug("Returning dict: %s" % d)
         return d    
 
@@ -52,9 +129,10 @@ class InfoEntity(object):
         self.log.debug("%s object name=%s %s ->%s" % (self.__class__.__name__, self.name, self.state, newstate) )
         self.state = newstate
     
+
     def store(self, infoclient):
         '''
-        Stores this Info Entity in the provided infoclient info tree. 
+        Updates this Info Entity in store behind given infoclient. 
         '''
         keystr = self.__class__.infokey
         validvalues = self.__class__.validvalues
@@ -65,9 +143,15 @@ class InfoEntity(object):
                 self.log.warning("%s entity has invalid value '%s' for attribute '%s' " % (self.__class__.__name__,
                                                                                            attrval,                                                                                            keyattr) )
         #resources = infoclient.getdocumentobject(key=keystr)
-        da = self.makeDictObject()
-        self.log.debug("Dict obj: %s" % da)
-        infoclient.storedocumentobject(da, key=keystr)
+        if hasattr(self, 'storenew'):
+            entdict = self.makeDictObject(newonly=False)
+            self.log.debug("Dict obj: %s" % entdict)
+            infoclient._storeentitydict(keystr, entdict )
+        else:
+            entdict = self.makeDictObject(newonly=True)
+            self.log.debug("Dict obj: %s" % entdict)
+            infoclient._mergeentitydict(keystr, entdict )
+        self.log.debug("Stored entity %s in key %s" % (self.name, keystr))
 
     def addAcl(self, aclstring):
         pass    
@@ -89,8 +173,9 @@ class InfoEntity(object):
         '''
         log = logging.getLogger()
         log.debug("Making object from dictionary...")
-        name = dict.keys()[0]
-        d = dict[name]
+        #name = dict.keys()[0]
+        #d = dict[name]
+        d = dict
         args = {}
         for key in cls.infoattributes:
             try:
@@ -107,4 +192,25 @@ class InfoEntity(object):
         eo = cls(**args)
         log.debug("Successfully made object from dictionary, returning...")
         return eo
+
+
+class InfoPersistencePlugin(object):
+
+    def __init__(self, parent, config, section ):
+        self.log = logging.getLogger()
+        self.lock = MockLock()
+        self.parent = parent
+        self.config = config
+        self.section = section
+
+class MockLock(object):
+    
+    def acquire(self):
+        pass
+        
+    def release(self):
+        pass
+        
+
+
 

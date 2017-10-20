@@ -26,9 +26,8 @@ from string import ascii_uppercase
 from optparse import OptionParser
 from ConfigParser import ConfigParser, NoOptionError
 
-#import requests
-#import urllib3
-#requests.packages.urllib3.disable_warnings(urllib3.exceptions.SecurityWarning)
+import urllib3
+requests.packages.urllib3.disable_warnings()
 
 try:
     logging.captureWarnings(True)
@@ -36,7 +35,9 @@ except AttributeError:
     # Some versions don't have this. 
     pass
 
-from vc3infoservice.core import InfoEntity
+from vc3infoservice.core import InfoEntity  
+from vc3infoservice.core import InfoConnectionFailure, InfoMissingPairingException, InfoEntityMissingException, InfoEntityExistsException
+
 
 TESTKEY='testkey'
 TESTDOC='''{ 
@@ -51,17 +52,6 @@ TESTDOC='''{
                 }
            }'''
 
-class InfoConnectionFailure(Exception):
-    def __init__(self, value):
-        self.value = value
-    def __str__(self):
-        return repr(self.value)   
-
-class InfoMissingPairingException(Exception):
-    def __init__(self, value):
-        self.value = value
-    def __str__(self):
-        return repr(self.value)  
 
 
 class InfoClient(object):
@@ -87,27 +77,150 @@ class InfoClient(object):
       
         self.log.debug("Client initialized.")
 
-    def storedocument(self, key, doc):
+################################################################################
+#                     Entity-oriented methods
+################################################################################
+
+    def _storeentitydict(self, key, edict):
         '''
-        Store JSON string <doc> in infoservice under key <key>.
+        Store entity dictionary <dict> in infoservice under key <key> after converting to JSON.
         
-        '''
-        
-        u = "https://%s:%s/info?key=%s" % (self.infohost, 
-                            self.httpsport,
-                            key
-                            )
-        self.log.debug("Trying to store document %s at %s" % (doc, u))
+        '''    
+        ename = edict.keys()[0]
+        u = "https://%s:%s/info?key=%s&entityname=%s" % (self.infohost, 
+                                                         self.httpsport,
+                                                         key,
+                                                         ename
+                                                         )
+        self.log.debug("Trying to store entity %s at %s" % (edict, u))
+        jdoc = json.dumps(edict)
+        self.log.debug("Entity converted to JSON: '%s'" % jdoc)
         try:
-            r = requests.put(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : doc})
+            r = requests.post(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : jdoc})
             self.log.debug(r.status_code)
+            if r.status_code == 405 :
+                raise InfoEntityExistsException("Attempted to store an Entity that already exists. Name: %s" % ename)
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)
             raise InfoConnectionFailure(str(ce))
+
+    def _getentitydict(self, key, entityname):
+        '''
+        Get and return dictionary string for entity <entityname> in key <key>.
+        '''
+        u = "https://%s:%s/info?key=%s&entityname=%s" % (self.infohost, 
+                            self.httpsport,
+                            key,
+                            entityname
+                            )
+        try:
+            r = requests.get(u, verify=self.chainfile, cert=(self.certfile, 
+                                                             self.keyfile))
+            if r.status_code == 405 :
+                raise InfoEntityMissingException("Attempted to get an Entity that doesn't exist. Name: %s" % entityname)
+            out = self.stripquotes(r.text)
+            parsed = json.loads(out)
+            #pretty = json.dumps(parsed, indent=4, sort_keys=True)
+            return parsed
+        except requests.exceptions.ConnectionError, ce:
+            self.log.error('Connection failure. %s' % ce)
+            raise InfoConnectionFailure(str(ce))
+
+
+    def listentities(self, klass):
+        '''
+        Return list of instance objects for all <entityclass> entities in infoservice. 
+        
+        '''
+        #m = sys.modules[__name__] 
+        #klass = getattr(m, entityclass)
+        infokey = klass.infokey
+        self.log.debug("Listing class %s with infokey %s " % (klass.__name__, infokey))     
+        docobj = self.getdocumentdict(infokey)
+        self.log.debug("Got document object: %s " % docobj)
+        olist = []
+        try:
+            for oname in docobj.keys():
+                    self.log.debug("Getting objectname %s" % oname)
+                    #s = "{ '%s' : %s }" % (oname, docobj[infokey][oname] )
+                    ed = docobj[oname]
+                    eo = klass.objectFromDict(ed)
+                    self.log.debug("Appending eo %s" % eo)
+                    olist.append(eo)
+        except KeyError, e:
+            self.log.warning("Document has no key '%s'", e.args[0])
+        except TypeError, e:
+            self.log.warning("Document object empty.")
+        return olist
+
+
+    def getentity(self, entityclass, entityname):
+        '''
+        Returns a valid instance object of <entityclass> from the infoservice. 
+        
+        '''
+        klass = entityclass
+        infokey = klass.infokey
+        self.log.debug("Getting %s entity %s with infokey %s " % (entityclass, entityname, infokey))     
+        eobj = self._getentitydict(infokey, entityname)
+        self.log.debug("Type of eobj is %s" % type(eobj))
+        self.log.debug("Got entity object: %s " % eobj)
+        eo = klass.objectFromDict(eobj)
+        return eo
+
+    def _mergeentitydict(self, key, edict):
+        '''
+        Take entity dict and update existing entity in infoservice after conversion to JSON. 
+        '''
+        ename = edict.keys()[0]
+        u = "https://%s:%s/info?key=%s&entityname=%s" % (self.infohost, 
+                                                         self.httpsport,
+                                                         key,
+                                                         ename
+                                                         )
+        self.log.debug("Trying to merge dict %s at %s" % (edict, u))
+        jdoc = json.dumps(edict)
+        self.log.debug("Entity converted to JSON: '%s'" % jdoc)
+        try:
+            r = requests.put(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : jdoc})
+            self.log.debug(r.status_code)            
+            if r.status_code == 405 :
+                raise InfoEntityMissingException("Attempted to update an Entity that doesn't exist. Name: %s" % ename)
+ 
+        except requests.exceptions.ConnectionError, ce:
+            self.log.error('Connection failure. %s' % ce)
+            raise InfoConnectionFailure(str(ce))
+
+    
+    def deleteentity(self, entityclass, entityname):
+        '''
+        deletes given entityname from key
+        '''
+        klass = entityclass
+        key = klass.infokey
+        u = "https://%s:%s/info?key=%s&entityname=%s" % (self.infohost, 
+                                                         self.httpsport,
+                                                         key,
+                                                         entityname
+                                                         )
+        try:
+            r = requests.delete(u, verify=self.chainfile, cert=(self.certfile, self.keyfile))
+            self.log.debug(r.status_code)            
+            if r.status_code == 405 :
+                raise InfoEntityMissingException("Attempted to update an Entity that doesn't exist. Name: %s" % ename)
+ 
+        except requests.exceptions.ConnectionError, ce:
+            self.log.error('Connection failure. %s' % ce)
+            raise InfoConnectionFailure(str(ce))
+
+
+################################################################################
+#                     Category document-oriented methods
+################################################################################
         
     def getdocument(self, key):
         '''
-        Get and return JSON string for document with key <key>
+        Get and return JSON string for document with key <key> from infoservice. 
                 
         '''
         u = "https://%s:%s/info?key=%s" % (self.infohost, 
@@ -120,26 +233,39 @@ class InfoClient(object):
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)
             raise InfoConnectionFailure(str(ce))
-    
-    def getdocumentobject(self, key):
+
+
+    def storedocument(self, key, doc):
         '''
-        Get JSON doc and convert to Python and return. 
+        Store JSON string <doc> in infoservice under key <key>. 
         
         '''
         u = "https://%s:%s/info?key=%s" % (self.infohost, 
                             self.httpsport,
                             key
                             )
+        self.log.debug("Trying to store document %s at %s" % (doc, u))
+        try:
+            r = requests.post(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : doc})
+            self.log.debug(r.status_code)
+        except requests.exceptions.ConnectionError, ce:
+            self.log.error('Connection failure. %s' % ce)
+            raise InfoConnectionFailure(str(ce))
 
+
+    def getdocumentdict(self, key):
+        '''
+        Get JSON doc and convert to Python and return. 
+        '''
         text = self.getdocument(key)
         out = self.stripquotes(text)
         parsed = json.loads(out)
         pretty = json.dumps(parsed, indent=4, sort_keys=True)
         return parsed
         
-    def storedocumentobject(self, dict, key):
+    def storedocumentdict(self, key, dict):
         '''
-        Directly store Python dictionary as JSON ...
+        Store Python dictionary in infoservice. 
         
         '''
         if key not in dict.keys():
@@ -150,8 +276,8 @@ class InfoClient(object):
         jstr = json.dumps(dict)
         self.log.debug("JSON string: %s" % jstr)
         self.storedocument(key, jstr)
-        
-    
+
+
     def mergedocument(self, key, doc):
                 
         u = "https://%s:%s/info?key=%s" % (self.infohost, 
@@ -182,13 +308,11 @@ class InfoClient(object):
     
     def getsubtree(self, path):
         pass
-    
+  
     def deletesubtree(self, path):
         '''
         Delete the leaf given by path.
-        
         '''
-
         try:
             keys = path.split('.')
             key  = keys[0]
@@ -208,25 +332,11 @@ class InfoClient(object):
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)
             raise InfoConnectionFailure(str(ce))
-        
-    def testquery(self):
-        self.log.info("Testing storedocument. Doc = %s" % TESTDOC)
-        self.storedocument(key=TESTKEY,doc=TESTDOC)
-        
-        self.log.info("Testing getdocument...")
-        self.getdocument(key=TESTKEY)
-        self.log.info("Done.")
 
 
-    def stripquotes(self,s):
-        rs = s.replace("'","")
-        return rs
-
-    def encode(self, string):
-        return base64.b64encode(string)
-    
-    def decode(self, string):
-        return base64.b64decode(string)
+##################################################################################
+#                             Infrastructural methods 
+##################################################################################
 
     def requestPairing(self, cnsubject):
         '''
@@ -280,8 +390,31 @@ class InfoClient(object):
     def generateCode(self, name ):       
         cs= ''.join(choice(ascii_uppercase) for i in range(6))
         return("%s-%s" % (name, cs))
-      
 
+################################################################################
+#                     Utility methods
+################################################################################
+       
+    def stripquotes(self,s):
+        rs = s.replace("'","")
+        return rs
+
+    def encode(self, string):
+        return base64.b64encode(string)
+    
+    def decode(self, string):
+        return base64.b64decode(string)
+
+
+    def testquery(self):
+        self.log.info("Testing storedocument. Doc = %s" % TESTDOC)
+        self.storedocument(key=TESTKEY,doc=TESTDOC)
+        
+        self.log.info("Testing getdocument...")
+        self.getdocument(key=TESTKEY)
+        self.log.info("Done.")
+
+      
 class Pairing(InfoEntity):
     '''
     Represents a request and completed entry for a pairing.
@@ -363,6 +496,7 @@ John Hover <jhover@bnl.gov>
                           help="Set logging level to WARNING [default]")
 
         default_conf = "/etc/vc3/vc3-infoclient.conf"
+        default_conf = ','.join([default_conf, os.path.expanduser('~/git/vc3-info-service/etc/vc3-infoclient.conf')])
         if 'VC3_SERVICES_HOME' in os.environ:
             # if running inside the builder...
             default_conf = ','.join([default_conf, os.path.expanduser('~/vc3-services/etc/vc3-infoclient.conf'), os.path.expanduser('~/vc3-services/etc/vc3-infoclient-local.conf')])

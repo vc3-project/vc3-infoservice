@@ -27,6 +27,7 @@ import traceback
 from optparse import OptionParser
 from ConfigParser import ConfigParser
 
+from vc3infoservice.core  import InfoEntityExistsException, InfoEntityMissingException
 
 # Since script is in package "vc3" we can know what to add to path for 
 # running directly during development
@@ -40,7 +41,14 @@ class InfoHandler(object):
     Handles low-level operations and persistence of information 
     from service using back-end plugin.
     
-    Data at this level is converted to/from native Python objects for storage/retrieval
+    Inbound arguments of InfoServiceAPI are JSON strings. These are converted to Python 
+    primitive objects for persistence plugin calls. 
+
+    inbound entities are expected to be in the form of JSON with entity.name indices, e.g.
+        '{ "name" : { "name" : "namevalue", "key1" : "val1" }}' 
+    
+    returned entities are in the form of unindexed entity JSON dictionaries , e.g. 
+        '{ "name" : "namevalue", "key1" : "val1" }'
      
     '''
     def __init__(self, config):
@@ -57,79 +65,189 @@ class InfoHandler(object):
                                     name=pluginname, 
                                     config=self.config, 
                                     section=psect)
-        self.log.debug("Done initting InfoHandler")
+        self.log.debug("Done initializing InfoHandler")
 
+################################################################################
+#                     Entity-oriented methods
+################################################################################
+
+    def storeentity(self, key, entityname, edoc):
+        '''
+        Stores contents of JSON doc string by entity level. If entity already exists, does not 
+        do so. 
+        
+        Entity doc:  
+         {"username": {"last": "Last", 
+                        "name": "username", 
+                        "acl": null,
+                       }
+                   }
+        '''
+        self.log.debug("input JSON doc to merge is %s" % edoc)
+        entitydict = json.loads(edoc)
+        self.persist.lock.acquire()
+        try:
+            currentdoc = self.persist.getdocument(key)
+            try:
+                existingentity = currentdoc[entityname]
+                cherrypy.response.status = 405
+                return "Attempt to create (POST) already-existing Entity. Name: %s. " % entityname
+            except KeyError:
+                self.log.debug("No existing entity %s. As expected..." % entityname)
+                pass
+            
+            self.log.debug("Merging entity with existing document.")
+            newdoc = self.merge( entitydict, currentdoc)
+            self.persist.storedocument(key, newdoc)
+            self.log.debug("Successfully stored entity.")            
+        finally:
+            self.persist.lock.release()        
+
+    
+    def mergeentity(self, key, entityname, edoc):
+        '''
+        merges contents of JSON doc string by entity level. 
+        '''
+        self.log.debug("input doc to merge is %s" % edoc)       
+        self.log.debug("input JSON doc to merge is type %s" % type(edoc))
+        entitydict = json.loads(edoc)
+        self.persist.lock.acquire()
+        try:
+            currentdoc = self.persist.getdocument(key)
+            existingentity = currentdoc[entityname]
+            self.log.debug("Merging entity with existing document.")
+            newdoc = self.merge( entitydict, currentdoc)
+            self.persist.storedocument(key, newdoc)
+            self.log.debug("Successfully stored entity.")            
+        except KeyError:
+            cherrypy.response.status = 405
+            return "Attempt to update (PUT) non-existent Entity. Name: %s. " % entityname
+        finally:
+            self.persist.lock.release()        
+
+
+    def getentity(self, key, entityname):
+        '''
+        Gets JSON representation of entity.
+        
+        { 'name' : <entityname>',
+          'key1'  : '<val1>'
+        }        
+        '''
+        currentdoc = self.persist.getdocument(key)
+        self.log.debug("Current doc for %s is %s" % (key, currentdoc))
+        try:
+            ed = currentdoc[entityname]
+            je = json.dumps(ed)
+            self.log.debug("JSON entity is %s" % str(je))
+            return je
+        except KeyError:
+            cherrypy.response.status = 405
+            return "Attempt to GET non-existent Entity. Name: %s. " % entityname
+            #raise InfoEntityMissingException("Attempt to update or get a non-existent Entity.")
+
+
+    def deleteentity(self, key, entityname):
+        '''
+        deletes relevant entity, if it exists. 
+        '''
+        self.persist.lock.acquire()
+        try:
+            doc = self.persist.getdocument(key)
+            self.log.debug("Deleting entity %s in key %s" % (entityname, key))
+            doc.pop(entityname)
+            self.persist.storedocument(key, doc)
+            self.log.debug("Successfully stored.")            
+        except KeyError:
+            self.log.warning("Entity %s not found, so can't delete it." % entityname)
+        finally:
+            self.persist.lock.release()   
+
+################################################################################
+#                     Category document-oriented methods
+################################################################################
+  
     def storedocument(self, key, doc):
+        '''
+        Overwrites existing document with new.
+        '''
         self.log.debug("Storing document for key %s" % key)
         pd = json.loads(doc)
-        self.persist.storedocument(key, pd)
-   
-    def mergedocument(self, key, doc):
-        self.log.debug("input doc to merge is type %s" % type(doc))
-        dcurrent = self.persist.getdocument(key)
-        self.log.debug("current retrieved doc is type %s" % type(dcurrent))
-        md = json.loads(doc)
-        self.log.debug("doc to merge is type %s" % type(md))
-        newdoc = self.merge( md, dcurrent)
-        self.log.debug("Merging document for key %s" % key)
-        self.persist.storedocument(key, newdoc)
+        self.persist.lock.acquire()
+        try:
+            self.persist.storedocument(key, pd)
+        finally:
+            self.persist.lock.release()
     
+    def mergedocument(self, key, doc):
+        self.log.debug("Merging document for key %s" % key)
+        self.persist.lock.acquire()
+        try:
+            dcurrent = self.persist.getdocument(key)
+            #pd = json.loads(doc)
+            
+            self.persist.storedocument(key, pd)
+        finally:
+            self.persist.lock.release()
+
+        self.persist.lock.acquire()
+        try:
+            dcurrent = self.persist.getdocument(key)
+            self.log.debug("current retrieved doc is type %s" % type(dcurrent))
+            md = json.loads(doc)
+            self.log.debug("doc to merge is type %s" % type(md))
+            newdoc = self.merge( md, dcurrent)
+            self.log.debug("Merging document for key %s" % key)
+            self.persist.storedocument(key, newdoc)
+        finally:
+            self.persist.lock.release()      
+
+    def deletedocument(self, key):
+        self.log.debug("Deleting document for key %s" % key)
+        #pd = json.loads(doc)
+        self.persist.lock.acquire()
+        emptydict = {}
+        try:
+            self.persist.storedocument(key, emptydict)
+        finally:
+            self.persist.lock.release()
+
     def getdocument(self, key):
         '''
         Gets JSON representation of document. 
         '''
-        pd = self._getpythondocument(key)
+        pd = self.persist.getdocument(key)
         jd = json.dumps(pd)
         self.log.debug("d is type %s" % type(jd))
         return jd
 
-    def _getpythondocument(self, key):
-        '''
-        Gets Python object. 
-        '''
-        d = self.persist.getdocument(key)
-        self.log.debug("d is type %s with value %s" % (type(d), d))
-        return d
-    
-    def _storepythondocument(self, key, pd):
-        self.log.debug("Storing document for key %s" % key)
-        self.persist.storedocument(key, pd)
-    
-    
-    def deletesubtree(self, path):
-        lst = path.split('.')
-        try:
-            self.persist.deletesubtree(lst)
-        except IndexError:
-            raise Exception('path should have more than one key')
+################################################################################
+#                     Utility methods
+################################################################################
 
-    def oldmerge(self, source, destination):
-        """
-        merges nested python dictionaries| lists | strings
-        run me with nosetests --with-doctest file.py
+#    def _getpythondocument(self, key):
+#        '''
+#        Gets Python object. 
+#        '''
+#        d = self.persist.getdocument(key)
+#        self.log.debug("d is type %s with value %s" % (type(d), d))
+#        return d
     
-        >>> a = { 'first' : { 'all_rows' : { 'pass' : 'dog', 'number' : '1' } } }
-        >>> b = { 'first' : { 'all_rows' : { 'fail' : 'cat', 'number' : '5' } } }
-        >>> merge(b, a) == { 'first' : { 'all_rows' : { 'pass' : 'dog', 'fail' : 'cat', 'number' : '5' } } }
-        True
-        
-        
-        """
-        self.log.debug("source is type %s" % type(source))
-        self.log.debug("destination is type %s" % type(destination))
-        for key, value in source.items():
-            self.log.debug("processing node %s" % key)
-            if isinstance(value, dict):
-                # get node or create one
-                node = destination.setdefault(key, {})
-                self.merge(value, node)
-            else:
-                destination[key] = value
-        return destination
+#    def _storepythondocument(self, key, pd):
+#        self.log.debug("Storing document for key %s" % key)
+#        self.persist.storedocument(key, pd)
+    
+    
+#    def deletesubtree(self, path):
+#        lst = path.split('.')
+#        try:
+#            self.persist.deletesubtree(lst)
+#        except IndexError:
+#            raise Exception('path should have more than one key')
 
     def merge(self, src, dest):
             ''' 
-            Merges src into dest and returns merged result
+            Merges python primitive object src into dest and returns merged result.
             Lists are appended.
             Dictionaries are merged. 
             Primitive values are overwritten. 
@@ -176,11 +294,9 @@ class InfoHandler(object):
             return dest
 
 
-
-
-    ##################################################################################
-    #   Infrastructural calls. 
-    ##################################################################################
+##################################################################################
+#                             Infrastructural methods 
+##################################################################################
     
     def getpairing(self, key, pairingcode):
         '''
@@ -223,7 +339,6 @@ class InfoHandler(object):
         '''
         pass
    
-   
 
 class InfoRoot(object):
 
@@ -238,8 +353,7 @@ class InfoRoot(object):
 class InfoServiceAPI(object):
     ''' 
         Data at this level is assumed to be  JSON text/plain. 
-       
-           
+    
     '''
     exposed = True 
     
@@ -249,13 +363,15 @@ class InfoServiceAPI(object):
         self.infohandler = InfoHandler(config)
         self.log.debug("InfoServiceAPI init done." )
     
-    def GET(self, key, pairingcode=None):
-        self.log.debug("Client wsgi_environ: %s" % str(cherrypy.request.wsgi_environ))
-        self.log.debug("Client headers: %s" % str(cherrypy.request.headers))
-        if pairingcode is None:
+    def GET(self, key, pairingcode=None, entityname=None):
+        if pairingcode is None and entityname is None:
             d = self.infohandler.getdocument(key) 
-            self.log.debug("Document retrieved for key %s with val %s" % (key,d))
+            self.log.debug("Document retrieved for key %s " % key)
             return d
+        elif pairingcode is None:
+            e = self.infohandler.getentity(key, entityname) 
+            self.log.debug("Entity retrieved for key %s and name %s" % (key,entityname))
+            return e
         else:
             self.log.debug("Handling pairing retrieval")
             d = self.infohandler.getpairing(key, pairingcode)
@@ -263,31 +379,40 @@ class InfoServiceAPI(object):
             return d
 
     @cherrypy.tools.accept(media='text/plain')
-    def PUT(self, key, data):
-        self.log.debug("Client headers: %s" % str(cherrypy.request.headers))
-        self.log.debug("Storing document %s" % data)
-        self.infohandler.mergedocument(key, data)
-        self.log.debug("Document stored for key %s" % key)
-        return "Document stored for key %s\n" % key
+    def PUT(self, key, entityname=None, data=None):
+        rtext = "Something went wrong..."
+        if entityname is None:
+            self.log.debug("Storing document %s" % data)
+            self.infohandler.mergedocument(key, data)
+            self.log.debug("Document stored for key %s" % key)
+            rtext= "Document stored for key %s\n" % key
+        else:
+            self.log.debug("Storing key %s entityname %s " % (key, entityname))
+            self.infohandler.mergeentity(key, entityname, data)
+            rtext= "Entity %s stored in key %s\n" % (entityname, key )
+        return rtext
+
         
-    def POST(self, key, data):
-        self.log.debug("Client headers: %s" % str(cherrypy.request.headers))
-        self.log.debug("Storing document %s" % data)
-        self.infohandler.storedocument(key, data)
-        self.log.debug("Document stored for key %s" % key)
-        return "Document stored for key %s\n" % key
+    def POST(self, key, entityname=None, data=None):
+        rtext = "Something went wrong..."
+        if entityname is None:
+            self.log.debug("Storing document %s" % data)
+            self.infohandler.storedocument(key, data)
+            self.log.debug("Document stored for key %s" % key)
+            rtext= "Document stored for key %s\n" % key
+        else:
+            self.log.debug("Storing key %s entityname %s " % (key, entityname))
+            self.infohandler.storeentity(key, entityname, data)
+            rtext= "Entity %s stored in key %s\n" % (entityname, key )
+        return rtext
         
-    def DELETE(self, key, name):
+    def DELETE(self, key, entityname ):
         '''
-        Unusual call that operates on node provided in path only. Path expressed as node 'name' attribute. 
-        /info/<key>/<name>/
-        Deletion only occurs if identity is allowed delete by ACL at <name>: { 'acl' :<acl> } 
+        Deletes specified entity from <key> document. 
         '''
-        self.log.debug("Client headers: %s" % str(cherrypy.request.headers))
-        self.log.debug("Deleting subtree %s" % name)
-        self.infohandler.deletesubtree(name)
-        self.log.debug("Subtree deleted at %s" % name)
-        return "Subtree deleted at %s" % name
+        self.infohandler.deleteentity(key, entityname)
+        rtext= "Entity %s deleted in key %s\n" % (entityname, key )
+        return rtext
 
 
     def stripquotes(self,s):
@@ -417,6 +542,7 @@ John Hover <jhover@bnl.gov>
                           help="Number of log backups to keep.")
 
         default_conf = "/etc/vc3/vc3-infoservice.conf"
+        default_conf = ','.join([default_conf, os.path.expanduser('~/git/vc3-info-service/etc/vc3-infoservice.conf')])
         if 'VC3_SERVICES_HOME' in os.environ:
             # if running inside the builder...
             default_conf = ','.join([default_conf, os.path.expanduser('~/vc3-services/etc/vc3-infoservice.conf'), os.path.expanduser('~/vc3-services/etc/vc3-infoservice-local.conf')])
@@ -564,8 +690,10 @@ John Hover <jhover@bnl.gov>
         """
         if self.options.confFiles != None:
             try:
+                self.log.debug("Conf file list %s" % self.options.confFiles)
                 self.config = ConfigParser()
-                self.config.read(self.options.confFiles)
+                rfs = self.config.read(self.options.confFiles)
+                self.log.debug("Read config file(s) %s" % rfs)
             except Exception, e:
                 self.log.error('Config failure')
                 sys.exit(1)
