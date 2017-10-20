@@ -128,7 +128,7 @@ if __name__ == '__main__':
     log.setLevel(logging.INFO)
     
     cp = ConfigParser()
-    cp.read(os.path.expanduser("~/git/vc3-info-service/etc/vc3-infoclient.conf"))
+    cp.read(os.path.expanduser("~/git/vc3-infoservice/etc/vc3-infoclient.conf"))
     capi = AppClientAPI(cp)
     log.debug("Making user...")   
 
@@ -208,10 +208,10 @@ if __name__ == '__main__':
     for u in ulist:
         print(u)
     
-    if len(ulist) > 2:
-        for u in ulist[2:]:
-            log.info("Deleting user %s" % u.name)
-            capi.deleteUser(u.name)
+    #if len(ulist) > 2:
+    #    for u in ulist[2:]:
+    #        log.info("Deleting user %s" % u.name)
+    #        capi.deleteUser(u.name)
     
     
     

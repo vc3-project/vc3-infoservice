@@ -500,7 +500,7 @@ class InfoServiceCLI(object):
     
     def __parseopts(self):
         parser = OptionParser(usage='''%prog [OPTIONS]
-vc3-info-service is a information store for VC3
+vc3-infoservice is a information store for VC3
 
 This program is licenced under the GPL, as set out in LICENSE file.
 
