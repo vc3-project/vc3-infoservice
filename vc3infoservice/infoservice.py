@@ -542,7 +542,7 @@ John Hover <jhover@bnl.gov>
                           help="Number of log backups to keep.")
 
         default_conf = "/etc/vc3/vc3-infoservice.conf"
-        default_conf = ','.join([default_conf, os.path.expanduser('~/git/vc3-info-service/etc/vc3-infoservice.conf')])
+        default_conf = ','.join([default_conf, os.path.expanduser('~/git/vc3-infoservice/etc/vc3-infoservice.conf')])
         if 'VC3_SERVICES_HOME' in os.environ:
             # if running inside the builder...
             default_conf = ','.join([default_conf, os.path.expanduser('~/vc3-services/etc/vc3-infoservice.conf'), os.path.expanduser('~/vc3-services/etc/vc3-infoservice-local.conf')])
