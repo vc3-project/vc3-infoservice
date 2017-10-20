@@ -5,13 +5,12 @@ import os
 import time
 import tempfile
 
-class DiskDump(object):
+from vc3infoservice.core import InfoPersistencePlugin
+
+class DiskDump(InfoPersistencePlugin):
     
     def __init__(self, parent, config, section ):
-        self.log = logging.getLogger()
-        self.parent = parent
-        self.config = config
-        self.section = section
+        super(DiskDump, self).__init__(parent, config, section)
         self.documents = {}
 
         try:

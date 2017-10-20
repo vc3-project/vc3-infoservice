@@ -1,15 +1,11 @@
 
-
-
 import logging
+from vc3infoservice.core import InfoPersistencePlugin
 
-class SQLite(object):
+class SQLite(InfoPersistencePlugin):
     
     def __init__(self, parent, config, section ):
-        self.log = logging.getLogger()
-        self.parent = parent
-        self.config = config
-        self.section = section
+        super(Memory, self).__init__(parent, config, section)
 
         self.log.debug("SQLite persistence plugin initialized...")
         

@@ -7,14 +7,13 @@ Use them directly...
 
 
 import logging
+from vc3infoservice.core import InfoPersistencePlugin
 
-class CouchDB(object):
+class CouchDB(InfoPersistencePlugin):
     
     def __init__(self, parent, config, section ):
-        self.log = logging.getLogger()
-        self.parent = parent
-        self.config = config
-        self.section = section
+
+
         self.log.debug("CouchDB persistence plugin initialized...")
         
     def storedocument(self, key, doc):

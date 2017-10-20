@@ -204,6 +204,9 @@ class InfoPersistencePlugin(object):
         self.section = section
 
 class MockLock(object):
+    '''
+    Provided as a convenience for persistence back ends that don't require atomic operations. 
+    ''' 
     
     def acquire(self):
         pass
