@@ -26,9 +26,8 @@ from string import ascii_uppercase
 from optparse import OptionParser
 from ConfigParser import ConfigParser, NoOptionError
 
-#import requests
-#import urllib3
-#requests.packages.urllib3.disable_warnings(urllib3.exceptions.SecurityWarning)
+import urllib3
+requests.packages.urllib3.disable_warnings()
 
 try:
     logging.captureWarnings(True)
@@ -36,8 +35,8 @@ except AttributeError:
     # Some versions don't have this. 
     pass
 
-from vc3infoservice.core import InfoEntity, InfoConnectionFailure, InfoMissingPairingException 
-from vc3infoservice.core import InfoEntityMissingException, InfoEntityExistsException
+from vc3infoservice.core import InfoEntity  
+from vc3infoservice.core import InfoConnectionFailure, InfoMissingPairingException, InfoEntityMissingException, InfoEntityExistsException
 
 
 TESTKEY='testkey'
@@ -128,7 +127,7 @@ class InfoClient(object):
             raise InfoConnectionFailure(str(ce))
 
 
-    def listentities(self, klass ):
+    def listentities(self, klass):
         '''
         Return list of instance objects for all <entityclass> entities in infoservice. 
         
