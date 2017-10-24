@@ -159,7 +159,8 @@ class InfoHandler(object):
             self.persist.storedocument(key, doc)
             self.log.debug("Successfully stored.")            
         except KeyError:
-            self.log.warning("Entity %s not found, so can't delete it." % entityname)
+            cherrypy.response.status = 405
+            return "Entity %s not found, so can't delete it." % entityname
         finally:
             self.persist.lock.release()   
 

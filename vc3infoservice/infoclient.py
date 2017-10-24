@@ -207,7 +207,7 @@ class InfoClient(object):
             r = requests.delete(u, verify=self.chainfile, cert=(self.certfile, self.keyfile))
             self.log.debug(r.status_code)            
             if r.status_code == 405 :
-                raise InfoEntityMissingException("Attempted to update an Entity that doesn't exist. Name: %s" % ename)
+                raise InfoEntityMissingException("Attempted to delete an Entity that doesn't exist. Name: %s" % ename)
  
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)
