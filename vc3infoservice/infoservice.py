@@ -103,21 +103,26 @@ class InfoHandler(object):
         finally:
             self.persist.lock.release()        
 
-    
     def mergeentity(self, key, entityname, edoc):
         '''
-        merges contents of JSON doc string by entity level. 
+        merges contents of (update-only) JSON doc string by entity level. 
+        Within entity, uses merge that replaces attributes with new values.
         '''
-        self.log.debug("input doc to merge is %s" % edoc)       
+        self.log.debug("input entity doc to merge is %s" % edoc)       
+        # e.g. {"SPT": {"allocations": ["lincolnb.uchicago-midway"]}}
         self.log.debug("input JSON doc to merge is type %s" % type(edoc))
         entitydict = json.loads(edoc)
         self.persist.lock.acquire()
         try:
             currentdoc = self.persist.getdocument(key)
             existingentity = currentdoc[entityname]
-            self.log.debug("Merging entity with existing document.")
-            newdoc = self.merge( entitydict, currentdoc)
-            self.persist.storedocument(key, newdoc)
+            newentity = entitydict[entityname]
+            #self.log.debug("Existing entity: %s" % existingentity)
+            #self.log.debug("New entity:" % newentity)
+            #self.log.debug("Merging newentity with existing entity.")
+            self.entitymerge(newentity, existingentity)
+            #self.log.debug("Resulting existing: %s" % existingentity)
+            self.persist.storedocument(key, currentdoc)
             self.log.debug("Successfully stored entity.")            
         except KeyError:
             cherrypy.response.status = 405
@@ -125,6 +130,25 @@ class InfoHandler(object):
         finally:
             self.persist.lock.release()        
 
+    def entitymerge(self, src, dest):
+            ''' 
+            Merges bare src entity into dest entity, unconditionally replacing *attribute* 
+            values at entity-attribute level. Intended to be used in-place, so dest is not returned. 
+            
+            { u'allocations': [u'lincolnb.uchicago-midway']}
+             + 
+            { u'allocations': [], 
+              u'name': u'SPT', 
+              u'blueprints': []  }
+             =
+             {u'allocations': [u'lincolnb.uchicago-midway'],
+             u'name': u'SPT', 
+             u'blueprints': []}
+             
+            '''
+            self.log.debug("Handling merging %s into %s " % (src, dest))
+            for attributename in src.keys():
+                dest[attributename] = src[attributename]
 
     def getentity(self, key, entityname):
         '''

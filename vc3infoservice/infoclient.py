@@ -36,7 +36,7 @@ except AttributeError:
     pass
 
 from vc3infoservice.core import InfoEntity  
-from vc3infoservice.core import InfoConnectionFailure, InfoMissingPairingException, InfoEntityMissingException, InfoEntityExistsException
+from vc3infoservice.core import InfoConnectionFailure, InfoMissingPairingException, InfoEntityUpdateMissingException, InfoEntityMissingException, InfoEntityExistsException
 
 
 TESTKEY='testkey'
@@ -185,7 +185,7 @@ class InfoClient(object):
             r = requests.put(u, verify=self.chainfile, cert=(self.certfile, self.keyfile), params={'data' : jdoc})
             self.log.debug(r.status_code)            
             if r.status_code == 405 :
-                raise InfoEntityMissingException("Attempted to update an Entity that doesn't exist. Name: %s" % ename)
+                raise InfoEntityUpdateMissingException("Attempted to update an Entity that doesn't exist. Name: %s" % ename)
  
         except requests.exceptions.ConnectionError, ce:
             self.log.error('Connection failure. %s' % ce)

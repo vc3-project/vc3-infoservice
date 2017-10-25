@@ -43,13 +43,57 @@ class InfoEntityExistsException(Exception):
 
 class InfoEntityMissingException(Exception):
     '''
-    Exception thrown when an attempt to *update* a non-existent entity is made.
+    Exception thrown when an attempt to get a non-existent entity is made.
     Entity must be created before it can be updated.  
     '''
     def __init__(self, value):
         self.value = value
     def __str__(self):
         return repr(self.value)  
+
+class InfoEntityUpdateMissingException(Exception):
+    '''
+    Exception thrown when an attempt to *update* a non-existent entity is made.
+    Entity must be created before it can be updated.  
+    '''
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value) 
+
+class InfoAttributeFacade(object):
+    '''
+    Intercepts __setattr__ one level down for InfoEntities. 
+   
+    '''
+    def __init__(self, parent, attrname):
+        log = logging.getLogger()  
+        object.__setattr__(self, '_parent', parent)
+        object.__setattr__(self, '_attrname', attrname)
+        log.debug("Facade made for attribute %s parent %s" % (attrname, parent))
+
+    def __setattr__(self, name, value):
+        '''
+        '''
+        log = logging.getLogger()        
+        if name in self.__class__.infoattributes:
+            try:
+                diffmap = self._diffmap
+            except AttributeError:
+                diffmap = {}
+                for at in self.__class__.infoattributes:
+                    diffmap[at] = 0
+                object.__setattr__(self,'_diffmap', diffmap)
+            diffmap[name] += 1
+            log.debug('infoattribute %s incremented to %s' % ( name, diffmap[name] ) )            
+        else:
+            log.debug('non-infoattribute %s' % name)
+        object.__setattr__(self, name, value)
+
+    def __getattr__(self, attrname):
+        return object.__getattr__(self, name)
+    
+
 
 
 class InfoEntity(object):
@@ -78,10 +122,30 @@ class InfoEntity(object):
                     diffmap[at] = 0
                 object.__setattr__(self,'_diffmap', diffmap)
             diffmap[name] += 1
-            log.debug('infoattribute %s' % name)            
+            log.debug('infoattribute %s incremented to %s' % ( name, diffmap[name] ) )            
         else:
             log.debug('non-infoattribute %s' % name)
         object.__setattr__(self, name, value)
+
+    #def __getattr__(self, name):
+    #    '''
+    #    To be on the safe side, we track attributes that have been retrieved. 
+    #    Client may alter an object that is the value of the attribute. 
+    #    '''
+    #    log = logging.getLogger()        
+    #    if name in self.__class__.infoattributes:
+    #        try:
+    #            diffmap = self._diffmap
+    #        except AttributeError:
+    #            diffmap = {}
+    #            for at in self.__class__.infoattributes:
+    #                diffmap[at] = 0
+    #            object.__setattr__(self,'_diffmap', diffmap)
+    #        diffmap[name] += 1
+    #        log.debug('infoattribute %s' % name)            
+    #    else:
+    #        log.debug('non-infoattribute %s' % name)
+    #    object.__getattr__(self, name)
 
 
     def getDiffInfo(self):
@@ -122,11 +186,13 @@ class InfoEntity(object):
         d[self.name] = {}
         if newonly:
             # only copy in values that have been re-set after initialization
+            self.log.debug("newonly set, getting diff info...")
             difflist = self.getDiffInfo()
             for attrname in difflist:
                 d[self.name][attrname] = getattr(self, attrname)
         else:
             # copy in all infoattribute values
+            self.log.debug("newonly not set, doing all values...")
             for attrname in self.infoattributes:
                 d[self.name][attrname] = getattr(self, attrname)
         self.log.debug("Returning dict: %s" % d)
