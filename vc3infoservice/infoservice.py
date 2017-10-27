@@ -10,6 +10,7 @@ __status__ = "Production"
 
 
 import cherrypy
+import inspect
 import logging
 import logging.handlers
 import os
@@ -83,6 +84,7 @@ class InfoHandler(object):
                        }
                    }
         '''
+        self.logrequest()
         self.log.debug("input JSON doc to merge is %s" % edoc)
         entitydict = json.loads(edoc)
         self.persist.lock.acquire()
@@ -158,6 +160,7 @@ class InfoHandler(object):
           'key1'  : '<val1>'
         }        
         '''
+        self.logrequest()
         currentdoc = self.persist.getdocument(key)
         self.log.debug("Current doc for %s is %s" % (key, currentdoc))
         try:
@@ -196,6 +199,7 @@ class InfoHandler(object):
         '''
         Overwrites existing document with new.
         '''
+        self.logrequest()
         self.log.debug("Storing document for key %s" % key)
         pd = json.loads(doc)
         self.persist.lock.acquire()
@@ -241,6 +245,7 @@ class InfoHandler(object):
         '''
         Gets JSON representation of document. 
         '''
+        self.logrequest()
         pd = self.persist.getdocument(key)
         jd = json.dumps(pd)
         self.log.debug("d is type %s" % type(jd))
@@ -249,6 +254,90 @@ class InfoHandler(object):
 ################################################################################
 #                     Utility methods
 ################################################################################
+
+    def logrequest(self):
+        r = cherrypy.request
+        self.log.info("###########################################################################################")
+        self.log.info("cherrpy.request = %s" % str(r))
+        for (k, v) in inspect.getmembers(r):
+            if not k.startswith('__'):
+                if inspect.ismethod(v):
+                    self.log.info("    %s()" % k )
+                else:
+                    self.log.info("    %s = %s" % (k, v))
+
+        s = cherrypy.serving
+        self.log.info("###########################################################################################")
+        self.log.info("cherrypy.serving = %s" % str(s))
+        for (k, v) in inspect.getmembers(s):
+            if not k.startswith('__'):
+                if inspect.ismethod(v):
+                    self.log.info("    %s()" % k )
+                else:
+                    self.log.info("    %s = %s" % (k, v))        
+
+        
+        sr = cherrypy.serving.request
+        self.log.info("###########################################################################################")
+        self.log.info("cherrypy.serving.request = %s" % str(sr))
+        for (k, v) in inspect.getmembers(sr):
+            if not k.startswith('__'):
+                if inspect.ismethod(v):
+                    self.log.info("    %s()" % k )
+                else:
+                    self.log.info("    %s = %s" % (k, v))            
+        
+        
+        rf = cherrypy.serving.request.rfile
+        self.log.info("###########################################################################################")
+        self.log.info("cherrypy.serving.request.rfile = %s" % str(rf))
+        for (k, v) in inspect.getmembers(rf):
+            if not k.startswith('__'):
+                if inspect.ismethod(v):
+                    self.log.info("    %s()" % k )
+                else:
+                    self.log.info("    %s = %s" % (k, v))         
+
+        rfrf = cherrypy.serving.request.rfile.rfile
+        self.log.info("###########################################################################################")
+        self.log.info("cherrypy.serving.request.rfile.rfile = %s" % str(rfrf))
+        for (k, v) in inspect.getmembers(rfrf):
+            if not k.startswith('__'):
+                if inspect.ismethod(v):
+                    self.log.info("    %s()" % k )
+                else:
+                    self.log.info("    %s = %s" % (k, v)) 
+
+        rfrfs = cherrypy.serving.request.rfile.rfile._sock
+        self.log.info("###########################################################################################")
+        self.log.info("cherrypy.serving.request.rfile.rfile._sock = %s" % str(rfrfs))
+        for (k, v) in inspect.getmembers(rfrfs):
+            if not k.startswith('__'):
+                if inspect.ismethod(v):
+                    self.log.info("    %s()" % k )
+                else:
+                    self.log.info("    %s = %s" % (k, v))
+
+       
+        #while True:      
+        #    try:
+        #        cherrypy.serving.request.rfile.rfile._sock.do_handshake()
+        #        self.log.info("do_handshake() didn't cause exception...")
+        #    except Exception, e:
+        #        self.log.error("Exception recieved %s" % e)
+               
+        peercert = cherrypy.serving.request.rfile.rfile._sock.get_peer_certificate()
+        self.log.info("Peercert is %s " % peercert)
+        if peercert is not None:
+            subj = peercert.get_subject()
+            ver = peercert.get_version()
+            issuer = peercert.get_issuer()
+            #self.log.debug("dir(subj) %s" % dir(subj))
+            self.log.info("Cert info: subject=%s ssl_version=%s issuer=%s" % (subj.commonName, ver, issuer.commonName))
+        else:
+            self.log.info("Peer cert is still none!")                
+        
+        
 
 #    def _getpythondocument(self, key):
 #        '''
@@ -328,6 +417,7 @@ class InfoHandler(object):
         Pull pairing document, check each entry to see if <entry>.pairingcode = pairingcode.
         If so, and cert and key are not none, prepare to return them, delete entry, return Pairing
         '''
+        self.logrequest()
         failmsg="Invalid pairing code or not satisfied yet. Try in 30 seconds."
         prd = None
         pd = self._getpythondocument(key)

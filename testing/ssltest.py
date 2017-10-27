@@ -35,8 +35,9 @@ class SSLTestClient(object):
         
     def verify_cb(self, conn, cert, errnum, depth, ok):
         certsubject = crypto.X509Name(cert.get_subject())
+        self.log.debug("Certsubject is %s" % certsubject)
         commonname = certsubject.commonName
-        print('Got certificate: ' + commonname)
+        self.log.debug('Got certificate: ' + commonname)
         return ok
 
     def run(self):       
@@ -66,6 +67,7 @@ class SSLTestClient(object):
                 break
         
         
+        self.log.debug("Out of send loop. Closing connection...")
         sock.shutdown()
         sock.close()
 
@@ -126,9 +128,7 @@ class SSLTestServer(object):
         server.bind(('', int(self.httpsport)))
         server.listen(3) 
         server.setblocking(0)
-        
-
-    
+           
         while 1:
             try:
                 r,w,_ = select.select([server]+self.clients.keys(), self.writers.keys(), [])
@@ -137,15 +137,29 @@ class SSLTestServer(object):
         
             for cli in r:
                 if cli == server:
+                    self.log.debug("Server object is %s" % server)
                     cli,addr = server.accept()
-                    print 'Connection from %s' % (addr,)
+                    self.log.debug('Connection from %s' % (addr,))
                     self.clients[cli] = addr
                     self.log.debug("cli is %s" % cli)
-                    self.log.debug("client cert is %s" % cli.get_peer_certificate())
+                    connobj = cli.get_peer_certificate()
+                    self.log.debug("On initial connection client cert is %s" % connobj)
         
                 else:
                     try:
                         ret = cli.recv(1024)
+                        connobj = cli.get_peer_certificate()
+                        self.log.debug("After recv() client cert is %s" % connobj)
+                        self.log.debug("dir(connobj): %s" % dir(connobj))
+                        self.log.debug("vars(connobj): %s" % vars(connobj))
+                        #Client cert info...
+                        subj = connobj.get_subject()
+                        ver = connobj.get_version()
+                        issuer = connobj.get_issuer()
+                        #self.log.debug("dir(subj) %s" % dir(subj))
+                        self.log.debug("Cert info: subject=%s ssl_version=%s issuer=%s" % (subj.commonName, ver, issuer.commonName))
+                        
+                        self.log.debug("Got %s" % ret)
                     except (SSL.WantReadError, SSL.WantWriteError, SSL.WantX509LookupError):
                         pass
                     except SSL.ZeroReturnError:
@@ -173,6 +187,7 @@ class SSLTestServer(object):
         
         for cli in self.clients.keys():
             cli.close()
+        self.log.debug("Out of server loop. Closing listening connection...")
         server.close()
 
 class SSLTestCLI(object):
