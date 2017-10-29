@@ -1,4 +1,4 @@
-#!/bin/env python
+#!//usr/bin/env python
 '''
 Simple echo server, using nonblocking I/O
 '''
@@ -151,7 +151,11 @@ class SSLTestServer(object):
                         connobj = cli.get_peer_certificate()
                         self.log.debug("After recv() client cert is %s" % connobj)
                         self.log.debug("dir(connobj): %s" % dir(connobj))
-                        self.log.debug("vars(connobj): %s" % vars(connobj))
+                        try:
+                            self.log.debug("vars(connobj): %s" % vars(connobj))
+                        except TypeError:
+                            self.log.debug("This platform Python not working with vars()...")
+                        
                         #Client cert info...
                         subj = connobj.get_subject()
                         ver = connobj.get_version()
