@@ -1,56 +1,20 @@
 NOTES on SSL 
 
-cherrypy.request
+Fix to cheroot to allow peer cert retreival:
+ /cheroot/cheroot/ssl/pyopenssl.py  pyOpenSSLAdapter 
 
-Request object dir:  
-'app', 'args', 'base', 'body', 'body_params', 'close', 'closed', 'config', 'cookie', 'dispatch', 
-'error_page', 'error_response', 'get_resource', 'handle_error', 'handler', 'header_list', 'headers', 'hooks', 
-'is_index', 'kwargs', 'local', 'login', 'method', 'methods_with_bodies', 'multiprocess', 'multithread', 'namespaces', 
-'params', 'path_info', 'prev', 'process_headers', 'process_query_string', 'process_request_body', 'protocol', 
-'query_string', 'query_string_encoding', 'remote', 'request_line', 'respond', 'rfile', 'run', 'scheme', 'script_name', 
-'server_protocol', 'show_mismatched_params', 'show_tracebacks', 'stage', 'throw_errors', 'throws', 'toolmaps', 
-'wsgi_environ']
 
-cherrypy.request.wsgi_environ:
-{
-'SSL_SERVER_I_DN_OU': 'SDCC', 
-'SERVER_SOFTWARE': 'CherryPy/11.0.0 Cheroot/5.8.0 Server', 
-'SCRIPT_NAME': '/info', 
-'ACTUAL_SERVER_PROTOCOL': 'HTTP/1.1', 
-'REQUEST_METHOD': 'GET', 
-'PATH_INFO': '', 
-'SERVER_PROTOCOL': 'HTTP/1.1', 
-'QUERY_STRING': 'key=allocation', 
-'REMOTE_ADDR': '127.0.0.1', 
-'HTTP_USER_AGENT': 'python-requests/2.13.0', 
-'HTTP_CONNECTION': 'keep-alive', 
-'SERVER_NAME': '0.0.0.0',
-'REMOTE_PORT': '41674', 
-'wsgi.url_scheme': 'https', 
-'SERVER_PORT': '20334', 
-'SSL_SERVER_M_VERSION': 2, 
-'SSL_SERVER_I_DN_O': 'BNL', 
-'SSL_SERVER_S_DN_OU': 'SDCC', 
-'SSL_SERVER_I_DN_C': 'US', 
-'SSL_SERVER_S_DN_O': 'BNL', 
-'wsgi.input': <cheroot.server.KnownLengthRFile object at 0x7f4a7866d610>, 
-'SSL_SERVER_I_DN_ST': 'NY', 
-'HTTP_HOST': 'localhost:20334', 
-'HTTPS': 'on', 
-'wsgi.multithread': True, 
-'SSL_SERVER_S_DN_C': 'US', 
-'REQUEST_URI': '/info?key=allocation', 
-'HTTP_ACCEPT': '*/*', 
-'SSL_SERVER_M_SERIAL': 4096, 
-'SSL_SERVER_S_DN': '/C=US/ST=NY/O=BNL/OU=SDCC/CN=localhost/emailAddress=jhover@bnl.gov', 
-'wsgi.version': (1, 0), 
-'SSL_SERVER_S_DN_ST': 'NY', 
-'wsgi.run_once': False, 
-'SSL_SERVER_I_DN_CN': 'defaultca-Intermediate', 
-'SSL_SERVER_S_DN_emailAddress': 'jhover@bnl.gov', 
-'wsgi.multiprocess': False, 
-'wsgi.errors': <open file '<stderr>', mode 'w' at 0x7f4a883311e0>, 
-'SSL_SERVER_I_DN_emailAddress': 'jhover@bnl.gov', 
-'SSL_SERVER_S_DN_CN': 'localhost', 
-'HTTP_ACCEPT_ENCODING': 'gzip, deflate', 
-'SSL_SERVER_I_DN': '/C=US/ST=NY/O=BNL/OU=SDCC/CN=defaultca-Intermediate/emailAddress=jhover@bnl.gov'}
+    def get_context(self):
+        """Return an SSL.Context from self attributes.
+       
+        """
+        # See http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/442473
+        c = SSL.Context(SSL.SSLv23_METHOD)
+        c.use_privatekey_file(self.private_key)
+        c.use_certificate_file(self.certificate)
+        if self.certificate_chain:
+            c.load_verify_locations(self.certificate_chain)
+            c.set_verify(SSL.VERIFY_PEER | SSL.VERIFY_FAIL_IF_NO_PEER_CERT, lambda *x:True)
+        return c
+
+

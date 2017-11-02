@@ -29,6 +29,8 @@ from optparse import OptionParser
 from ConfigParser import ConfigParser
 
 from vc3infoservice.core  import InfoEntityExistsException, InfoEntityMissingException
+from miracle.acl import Acl
+
 
 # Since script is in package "vc3" we can know what to add to path for 
 # running directly during development
@@ -36,6 +38,9 @@ from vc3infoservice.core  import InfoEntityExistsException, InfoEntityMissingExc
 sys.path.append(libpath)
 
 import pluginmanager as pm
+
+
+
 
 class InfoHandler(object):
     '''
@@ -256,6 +261,21 @@ class InfoHandler(object):
 ################################################################################
 
     def logrequest(self):
+        
+        peercert = cherrypy.serving.request.rfile.rfile._sock.get_peer_certificate()
+        self.log.info("Peercert is %s " % peercert)
+        if peercert is not None:
+            subj = peercert.get_subject()
+            ver = peercert.get_version()
+            issuer = peercert.get_issuer()
+            #self.log.debug("dir(subj) %s" % dir(subj))
+            self.log.info("Cert info: subject=%s ssl_version=%s issuer=%s" % (subj.commonName, ver, issuer.commonName))
+        else:
+            self.log.info("Peer cert is still none!")          
+        
+        return
+
+    '''
         r = cherrypy.request
         self.log.info("###########################################################################################")
         self.log.info("cherrpy.request = %s" % str(r))
@@ -325,17 +345,9 @@ class InfoHandler(object):
         #        self.log.info("do_handshake() didn't cause exception...")
         #    except Exception, e:
         #        self.log.error("Exception recieved %s" % e)
-               
-        peercert = cherrypy.serving.request.rfile.rfile._sock.get_peer_certificate()
-        self.log.info("Peercert is %s " % peercert)
-        if peercert is not None:
-            subj = peercert.get_subject()
-            ver = peercert.get_version()
-            issuer = peercert.get_issuer()
-            #self.log.debug("dir(subj) %s" % dir(subj))
-            self.log.info("Cert info: subject=%s ssl_version=%s issuer=%s" % (subj.commonName, ver, issuer.commonName))
-        else:
-            self.log.info("Peer cert is still none!")                
+        
+        #cherrypy.serving.request.rfile.rfile._sock.do_handshake()       
+    '''              
         
         
 

@@ -96,6 +96,14 @@ class SSLTestServer(object):
     def verify_cb(self, conn, cert, errnum, depth, ok):
         # This obviously has to be updated
         self.log.info('Got certificate: %s' % cert.get_subject())
+        #Client cert info...
+        subj = cert.get_subject()
+        ver = cert.get_version()
+        issuer = cert.get_issuer()
+        #self.log.debug("dir(subj) %s" % dir(subj))
+        self.log.debug("Cert info: subject=%s ssl_version=%s issuer=%s" % (subj.commonName, ver, issuer.commonName))
+                        
+        
         return ok
     
     def dropClient(self, cli, errors=None):
@@ -147,10 +155,10 @@ class SSLTestServer(object):
         
                 else:
                     try:
-                        ret = cli.recv(1024)
+                        #ret = cli.do_handshake()
                         connobj = cli.get_peer_certificate()
-                        self.log.debug("After recv() client cert is %s" % connobj)
-                        self.log.debug("dir(connobj): %s" % dir(connobj))
+                        self.log.debug("After ssltest get_peer_certificate() client cert is %s" % connobj)
+                        #self.log.debug("dir(connobj): %s" % dir(connobj))
                         try:
                             self.log.debug("vars(connobj): %s" % vars(connobj))
                         except TypeError:
@@ -163,6 +171,8 @@ class SSLTestServer(object):
                         #self.log.debug("dir(subj) %s" % dir(subj))
                         self.log.debug("Cert info: subject=%s ssl_version=%s issuer=%s" % (subj.commonName, ver, issuer.commonName))
                         
+                        # Go ahead and read from socket...
+                        ret = cli.recv(1024)
                         self.log.debug("Got %s" % ret)
                     except (SSL.WantReadError, SSL.WantWriteError, SSL.WantX509LookupError):
                         pass
