@@ -209,10 +209,10 @@ if __name__ == '__main__':
                              )
     log.debug("User is %s" % u)    
 
-    aclone = Acl()
+    acls = Acl()
     
-    aclone.add_resource('useronename')
-    log.debug(aclone.get_resources())
+    acls.add_resource('useronename')
+    log.debug(acls.get_resources())
     
     
     
