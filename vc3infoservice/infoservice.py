@@ -31,15 +31,7 @@ from ConfigParser import ConfigParser
 from vc3infoservice.core  import InfoEntityExistsException, InfoEntityMissingException
 from miracle.acl import Acl
 
-
-# Since script is in package "vc3" we can know what to add to path for 
-# running directly during development
-(libpath,tail) = os.path.split(sys.path[0])
-sys.path.append(libpath)
-
 import pluginmanager as pm
-
-
 
 
 class InfoHandler(object):

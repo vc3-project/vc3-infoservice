@@ -1,6 +1,6 @@
 NOTES on SSL 
 
-Fix to cheroot to allow peer cert retreival:
+Fix to cheroot to allow peer cert retrieval:
  /cheroot/cheroot/ssl/pyopenssl.py  pyOpenSSLAdapter 
 
 
@@ -17,4 +17,6 @@ Fix to cheroot to allow peer cert retreival:
             c.set_verify(SSL.VERIFY_PEER | SSL.VERIFY_FAIL_IF_NO_PEER_CERT, lambda *x:True)
         return c
 
+
+ACLs
 
