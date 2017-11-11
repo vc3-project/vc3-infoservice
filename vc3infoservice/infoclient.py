@@ -27,7 +27,10 @@ from optparse import OptionParser
 from ConfigParser import ConfigParser, NoOptionError
 
 import urllib3
-requests.packages.urllib3.disable_warnings()
+try:
+    requests.packages.urllib3.disable_warnings()
+except AttributeError:
+    pass
 
 try:
     logging.captureWarnings(True)
