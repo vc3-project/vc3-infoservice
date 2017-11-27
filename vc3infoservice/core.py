@@ -122,7 +122,6 @@ class InfoEntity(object):
                     diffmap[at] = 0
                 object.__setattr__(self,'_diffmap', diffmap)
             diffmap[name] += 1
-            log.debug('infoattribute %s incremented to %s' % ( name, diffmap[name] ) )            
         else:
             log.debug('non-infoattribute %s' % name)
         object.__setattr__(self, name, value)
