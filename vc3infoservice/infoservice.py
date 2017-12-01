@@ -14,6 +14,7 @@ import inspect
 import logging
 import logging.handlers
 import os
+import pickle
 import platform
 import pwd
 import random
@@ -63,7 +64,35 @@ class InfoHandler(object):
                                     name=pluginname, 
                                     config=self.config, 
                                     section=psect)
+        
+        # Set up access security
+        self.secenabled = config.get('security', 'enabled').strip().lower()
+        if self.secenabled == 'true':
+            self.secenabled = True
+        else:
+            self.seceneabled = False
+        
+        if self.secenabled:    
+            self.admincns = config.get('security', 'admincns')
+            self.adminca = config.get('security', 'adminca')
+            self.accessstorefile = config.get('security', 'accessstorefile')
+        
+        self.access = None
+        self.init_security()
+        
         self.log.debug("Done initializing InfoHandler")
+
+
+    def init_security(self):
+        self.log.info("Initializing security...")
+        self.access = Acl()
+        try:
+            aclsave = pickle.load( open( self.accessstorefile, "rb" ) )
+            self.access.__setstate__(aclsave)
+        except IOError:
+            self.log.info("No saved access state.")
+            
+    
 
 ################################################################################
 #                     Entity-oriented methods
@@ -261,86 +290,15 @@ class InfoHandler(object):
             ver = peercert.get_version()
             issuer = peercert.get_issuer()
             #self.log.debug("dir(subj) %s" % dir(subj))
-            self.log.info("Cert info: subject=%s ssl_version=%s issuer=%s" % (subj.commonName, ver, issuer.commonName))
+            subjitems = subj.get_components()
+            issueritems = issuer.get_components()
+            self.log.debug("Subject info: %s" % subjitems)
+            self.log.debug("Issuer info: %s" % issueritems)
+            self.log.info("Cert info: subject=%s ssl_version=%s issuer=%s" % (subj.commonName, 
+                                                                              ver, 
+                                                                              issuer.commonName))
         else:
             self.log.info("Peer cert is still none!")          
-        
-        return
-
-    '''
-        r = cherrypy.request
-        self.log.info("###########################################################################################")
-        self.log.info("cherrpy.request = %s" % str(r))
-        for (k, v) in inspect.getmembers(r):
-            if not k.startswith('__'):
-                if inspect.ismethod(v):
-                    self.log.info("    %s()" % k )
-                else:
-                    self.log.info("    %s = %s" % (k, v))
-
-        s = cherrypy.serving
-        self.log.info("###########################################################################################")
-        self.log.info("cherrypy.serving = %s" % str(s))
-        for (k, v) in inspect.getmembers(s):
-            if not k.startswith('__'):
-                if inspect.ismethod(v):
-                    self.log.info("    %s()" % k )
-                else:
-                    self.log.info("    %s = %s" % (k, v))        
-
-        
-        sr = cherrypy.serving.request
-        self.log.info("###########################################################################################")
-        self.log.info("cherrypy.serving.request = %s" % str(sr))
-        for (k, v) in inspect.getmembers(sr):
-            if not k.startswith('__'):
-                if inspect.ismethod(v):
-                    self.log.info("    %s()" % k )
-                else:
-                    self.log.info("    %s = %s" % (k, v))            
-        
-        
-        rf = cherrypy.serving.request.rfile
-        self.log.info("###########################################################################################")
-        self.log.info("cherrypy.serving.request.rfile = %s" % str(rf))
-        for (k, v) in inspect.getmembers(rf):
-            if not k.startswith('__'):
-                if inspect.ismethod(v):
-                    self.log.info("    %s()" % k )
-                else:
-                    self.log.info("    %s = %s" % (k, v))         
-
-        rfrf = cherrypy.serving.request.rfile.rfile
-        self.log.info("###########################################################################################")
-        self.log.info("cherrypy.serving.request.rfile.rfile = %s" % str(rfrf))
-        for (k, v) in inspect.getmembers(rfrf):
-            if not k.startswith('__'):
-                if inspect.ismethod(v):
-                    self.log.info("    %s()" % k )
-                else:
-                    self.log.info("    %s = %s" % (k, v)) 
-
-        rfrfs = cherrypy.serving.request.rfile.rfile._sock
-        self.log.info("###########################################################################################")
-        self.log.info("cherrypy.serving.request.rfile.rfile._sock = %s" % str(rfrfs))
-        for (k, v) in inspect.getmembers(rfrfs):
-            if not k.startswith('__'):
-                if inspect.ismethod(v):
-                    self.log.info("    %s()" % k )
-                else:
-                    self.log.info("    %s = %s" % (k, v))
-
-       
-        #while True:      
-        #    try:
-        #        cherrypy.serving.request.rfile.rfile._sock.do_handshake()
-        #        self.log.info("do_handshake() didn't cause exception...")
-        #    except Exception, e:
-        #        self.log.error("Exception recieved %s" % e)
-        
-        #cherrypy.serving.request.rfile.rfile._sock.do_handshake()       
-    '''              
-        
         
 
 #    def _getpythondocument(self, key):

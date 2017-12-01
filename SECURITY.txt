@@ -20,3 +20,15 @@ Fix to cheroot to allow peer cert retrieval:
 
 ACLs
 
+ACL object is member of InfoHandler
+
+
+resources = / (root), /<category>, /<category>/<entityname>
+permissions = read, write, admin
+roles = <users> , <projects>, *admin   
+
+
+
+
+
+

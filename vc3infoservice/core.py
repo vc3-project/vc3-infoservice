@@ -92,8 +92,6 @@ class InfoAttributeFacade(object):
 
     def __getattr__(self, attrname):
         return object.__getattr__(self, name)
-    
-
 
 
 class InfoEntity(object):
@@ -227,11 +225,6 @@ class InfoEntity(object):
             infoclient._mergeentitydict(keystr, entdict )
         self.log.debug("Stored entity %s in key %s" % (self.name, keystr))
 
-    def addAcl(self, aclstring):
-        pass    
-
-    def removeAcl(self, aclstring):
-        pass
 
     @classmethod
     def objectFromDict(cls, dict):
