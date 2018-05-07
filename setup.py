@@ -24,7 +24,8 @@ def choose_data_file_locations():
         return rpm_data_files
 
 current_time = time.gmtime()
-release_version = "{0}.{1:0>2}.{2:0>2}".format(current_time.tm_year, current_time.tm_mon, current_time.tm_mday)
+#release_version = "{0}.{1:0>2}.{2:0>2}".format(current_time.tm_year, current_time.tm_mon, current_time.tm_mday)
+release-version = '1.0.0'
 
 systemd_files = ['etc/vc3-infoservice.service']
 
