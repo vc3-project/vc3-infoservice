@@ -108,6 +108,7 @@ class InfoEntity(object):
     infoattributes = []
     intattributes = []
     validvalues = {}
+    nameattributes = ['name']
 
     def __setattr__(self, name, value):
         '''
@@ -252,14 +253,19 @@ class InfoEntity(object):
         return newobj
     
     
-    def generateName(self, length=16):
+    def generateName(self, length=8):
         '''
         Make new name attribute appropriate to this object. 
         For parent InfoEntity, just generate a random string...
         '''
-        randomstr = InfoEntity.randomChars(self, length)
-        return randomstr
-    
+        randomstr = InfoEntity.randomChars(length)
+        newname = ""
+        for na in self.__class__.nameattributes:
+            self.log.debug("building name with %s " % na)
+            newname += InfoEntity.normalizeAttribute(getattr(self, na))
+        newname += ".%s" % randomstr
+        return newname
+        
 
     @classmethod
     def objectFromDict(cls, dict):
@@ -295,10 +301,18 @@ class InfoEntity(object):
         return eo
     
     @classmethod
-    def randomChars(self, length=5):
+    def randomChars(cls, length=5):
         randomstr = ''.join([random.choice(string.ascii_lowercase) for n in xrange(length)])
         return randomstr
         
+    @classmethod
+    def normalizeAttribute(cls, value):
+        v = str(value)
+        v = v.lower()
+        v = v.replace(" ","")
+        v= v[0:16]
+        return v
+      
 
 class InfoPersistencePlugin(object):
 

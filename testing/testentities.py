@@ -24,6 +24,7 @@ class User(InfoEntity):
     infokey = 'user'
     validvalues = {}
     intattributes = []
+    nameattributes = ['first','last']
     
     def __init__(self,
                    name,
@@ -73,16 +74,6 @@ class User(InfoEntity):
         self.allocations = allocations
         self.log.debug("Entity created: %s" % self)
 
-    def generateName(self):
-        prefix = "%s.%s" % ( self.first, self.last)
-        suffix = ""
-        newname = ""
-        if len(prefix) < 5:
-            newname += InfoEntity.randomChars(length = 16)
-        else:
-            suffix += InfoEntity.randomChars(length = 5)
-            newname = "%s.%s" % (prefix, suffix)
-        return newname
         
         
         
