@@ -10,6 +10,8 @@ __email__ = "jhover@bnl.gov"
 __status__ = "Production"
 
 import logging
+import random
+import string
 
 class InfoConnectionFailure(Exception):
     '''
@@ -231,17 +233,44 @@ class InfoEntity(object):
     def removeAcl(self, aclstring):
         pass
 
+    def getClone(self, newname = None):
+        '''
+        Make new identical object with new name attribute. 
+        '''
+        self.log.debug("making clone of %s object name=%s " % (self.__class__.__name__, self.name) )
+        dictobject = self.makeDictObject()  # has name as index of attribute dict
+        dict = dictobject[self.name]
+        
+        if newname is not None:
+            dict['name'] = newname
+        else:
+            dict['name'] = self.generateName()
+        self.log.debug('new dict is %s' % dict)    
+        newobj = self.__class__.objectFromDict(dict)
+        newobj.storenew = True
+        self.log.debug('new object is %s' % newobj)
+        return newobj
+    
+    
+    def generateName(self, length=16):
+        '''
+        Make new name attribute appropriate to this object. 
+        For parent InfoEntity, just generate a random string...
+        '''
+        randomstr = InfoEntity.randomChars(self, length)
+        return randomstr
+    
+
     @classmethod
     def objectFromDict(cls, dict):
         '''
         Returns an initialized Entity object from dictionary. 
         Input: Dict:
-        { <name> : 
             {
                 "name" : "<name>",
                 "att1" : "<val1>"  
             }
-        }
+
         '''
         log = logging.getLogger()
         log.debug("Making object from dictionary...")
@@ -264,7 +293,12 @@ class InfoEntity(object):
         eo = cls(**args)
         log.debug("Successfully made object from dictionary, returning...")
         return eo
-
+    
+    @classmethod
+    def randomChars(self, length=5):
+        randomstr = ''.join([random.choice(string.ascii_lowercase) for n in xrange(length)])
+        return randomstr
+        
 
 class InfoPersistencePlugin(object):
 

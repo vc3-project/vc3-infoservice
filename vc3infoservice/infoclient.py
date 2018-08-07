@@ -216,6 +216,8 @@ class InfoClient(object):
             self.log.error('Connection failure. %s' % ce)
             raise InfoConnectionFailure(str(ce))
 
+       
+        
 
 ################################################################################
 #                     Category document-oriented methods

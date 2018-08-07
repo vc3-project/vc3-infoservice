@@ -18,7 +18,8 @@ class User(InfoEntity):
                      'description',
                      'displayname',
                      'url',
-                     'docurl'                  
+                     'docurl',
+                     'allocations',                  
                      ] 
     infokey = 'user'
     validvalues = {}
@@ -36,7 +37,8 @@ class User(InfoEntity):
                    description=None,
                    displayname=None,
                    url=None,
-                   docurl=None
+                   docurl=None,
+                   allocations = None
                 ):
         '''
         Defines a new User object. 
@@ -68,5 +70,20 @@ class User(InfoEntity):
         self.displayname = displayname
         self.url = url
         self.docurl = docurl
+        self.allocations = allocations
         self.log.debug("Entity created: %s" % self)
 
+    def generateName(self):
+        prefix = "%s.%s" % ( self.first, self.last)
+        suffix = ""
+        newname = ""
+        if len(prefix) < 5:
+            newname += InfoEntity.randomChars(length = 16)
+        else:
+            suffix += InfoEntity.randomChars(length = 5)
+            newname = "%s.%s" % (prefix, suffix)
+        return newname
+        
+        
+        
+        
