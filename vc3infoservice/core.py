@@ -264,7 +264,7 @@ class InfoEntity(object):
         for na in self.__class__.nameattributes:
             self.log.debug("Building name with %s " % na)
             newname += InfoEntity.normalizeAttribute(getattr(self, na))
-        newname += ".%s" % randomstr
+        newname += "-%s" % randomstr
         return newname
         
 
