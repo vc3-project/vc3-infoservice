@@ -168,10 +168,10 @@ if __name__ == '__main__':
     except InfoEntityMissingException:
         log.info("No such user.")
 
-    log.info("cloning user with newname")
-    newuser = u.getClone(newname = 'cloneduser')
-    log.info("newuser is %s" % newuser)
-    capi.storeUser(newuser)
+    #log.info("cloning user with newname")
+    #newuser = u.getClone(newname = 'cloneduser')
+    #log.info("newuser is %s" % newuser)
+    #capi.storeUser(newuser)
 
     log.info("cloning user without newname")
     newuser = u.getClone()

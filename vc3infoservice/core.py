@@ -241,7 +241,6 @@ class InfoEntity(object):
         self.log.debug("making clone of %s object name=%s " % (self.__class__.__name__, self.name) )
         dictobject = self.makeDictObject()  # has name as index of attribute dict
         dict = dictobject[self.name]
-        
         if newname is not None:
             dict['name'] = newname
         else:
@@ -258,10 +257,12 @@ class InfoEntity(object):
         Make new name attribute appropriate to this object. 
         For parent InfoEntity, just generate a random string...
         '''
+        self.log.debug("Generating name...")
         randomstr = InfoEntity.randomChars(length)
+        self.log.debug("Got random part %s" % randomstr)
         newname = ""
         for na in self.__class__.nameattributes:
-            self.log.debug("building name with %s " % na)
+            self.log.debug("Building name with %s " % na)
             newname += InfoEntity.normalizeAttribute(getattr(self, na))
         newname += ".%s" % randomstr
         return newname
@@ -302,15 +303,20 @@ class InfoEntity(object):
     
     @classmethod
     def randomChars(cls, length=5):
+        log = logging.getLogger()
+        log.debug("Generating random chars...")
         randomstr = ''.join([random.choice(string.ascii_lowercase) for n in xrange(length)])
         return randomstr
         
     @classmethod
     def normalizeAttribute(cls, value):
+        log = logging.getLogger()
+        log.debug("Normalizing %s " % value)
         v = str(value)
         v = v.lower()
         v = v.replace(" ","")
         v= v[0:16]
+        log.debug("Value normalized to %s" % v)
         return v
       
 
